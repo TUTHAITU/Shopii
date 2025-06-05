@@ -278,7 +278,7 @@ const {
   
   /**
    * @desc Lấy tất cả các tranh chấp
-   * @route GET /api/admin/disputes
+   * @route GET /api/admin/ 
    * @access Riêng tư (Admin)
    */
   exports.getAllDisputesAdmin = async (req, res) => {
