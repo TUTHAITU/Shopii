@@ -37,7 +37,7 @@
 // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const express = require("express");
 const { connect } = require("mongoose");
-const router = require("./routers/index.js");
+const router = require("./src/routers/index.js");
 const dotenv = require("dotenv");
 const cors = require("cors");
 
