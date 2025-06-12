@@ -12,13 +12,19 @@ router.use(isSeller);
 router.post("/login", sellerController.loginAndSwitch);
 
 // Quản lý cửa hàng
-router.put("/store", sellerController.updateStoreProfile);
+router.get("/store", sellerController.getProfileStore); // LẤY PROFILE STORE
+router.put("/store", sellerController.updateStoreProfile); // UPDATE
 
 // Quản lý sản phẩm
 router.post("/products", sellerController.createProduct);
 router.get("/products", sellerController.getProducts);
 router.put("/products/:id", sellerController.updateProduct);
 router.delete("/products/:id", sellerController.deleteProduct);
+
+// Lấy chi tiết 1 sản phẩm
+router.get("/products/:id", sellerController.getProductById);
+// Lấy review theo productId
+router.get("/products/:id/reviews", sellerController.getReviewsByProductId);
 
 // Quản lý tồn kho
 router.get("/inventory", sellerController.getInventory);

@@ -70,7 +70,7 @@ const authMiddleware = async (req, res, next) => {
     // ✅ Bỏ qua xác thực khi test bằng Postman (nếu có ?skipAuth=true)
     if (req.query.skipAuth === 'true') {
       req.user = {
-        id: '67fe591581ab555c417197be',
+        id: '67fe591581ab555c417197bc',
         role: 'seller', // hoặc 'seller' để test vai trò khác
         name: 'Test'
       };

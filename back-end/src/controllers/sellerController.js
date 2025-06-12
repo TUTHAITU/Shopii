@@ -8,6 +8,7 @@ const ShippingInfo = require("../models/ShippingInfo");
 const Review = require("../models/Review");
 const Feedback = require("../models/Feedback");
 const Dispute = require("../models/Dispute");
+const Category = require("../models/Category");
 const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken');
 
@@ -40,6 +41,21 @@ exports.loginAndSwitch = async (req, res) => {
         role: user.role
       }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Lấy thông tin hồ sơ cửa hàng (profile) của seller hiện tại
+exports.getProfileStore = async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const store = await Store.findOne({ sellerId }).populate('sellerId');
+
+    if (!store) {
+      return res.status(404).json({ success: false, message: "Store profile not found" });
+    }
+    res.json({ success: true, data: store });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -98,7 +114,47 @@ exports.createProduct = async (req, res) => {
 exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find({ sellerId: req.user.id });
-    res.json({ success: true, data: products });
+    const productIds = products.map(p => p._id);
+
+    const productsList = await Inventory.find({ productId: { $in: productIds } })
+      .populate({ path: "productId",populate: {path: "categoryId" } });
+      // .populate("productId", "name description price")  // Lấy thêm các thuộc tính name, description, price từ Product
+      // .select("quantity location");  // Lấy thêm các thuộc tính quantity, location từ Inventory
+    res.json({ success: true, data: productsList });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+// Lấy chi tiết 1 sản phẩm
+exports.getProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+    // Lấy thêm thông tin tồn kho nếu cần
+    const productsDetail = await Inventory.find({ productId: id})
+      .populate({ path: "productId",populate: {path: "categoryId" } });
+
+    // const inventory = await Inventory.findOne({ productId: id });
+    // product.inStock = inventory ? inventory.quantity : 0;
+
+    res.json({ success: true, data: productsDetail });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+// Lấy tất cả review của 1 sản phẩm
+exports.getReviewsByProductId = async (req, res) => {
+  try {
+    const { id } = req.params; // id là productId
+
+    const reviews = await Review.find({ productId: id })
+      .populate('reviewerId', 'username')
+      .sort({ createdAt: -1 }); // mới nhất lên đầu
+
+    res.json({ success: true, data: reviews });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -106,17 +162,41 @@ exports.getProducts = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   try {
+    // 1. Cập nhật product
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id, sellerId: req.user.id },
       req.body,
       { new: true }
     );
-    
+
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
-    
-    res.json({ success: true, data: product });
+
+    // 2. Nếu request có quantity thì cập nhật Inventory
+    if (typeof req.body.quantity !== 'undefined') {
+      await Inventory.findOneAndUpdate(
+        { productId: product._id },
+        { quantity: req.body.quantity },
+        { new: true }
+      );
+    }
+
+    // 3. Lấy lại product và populate categoryId
+    const populatedProduct = await Product.findById(product._id)
+      .populate('categoryId', 'name');
+
+    // 4. Lấy quantity trong Inventory
+    const inventory = await Inventory.findOne({ productId: product._id });
+
+    res.json({
+      success: true,
+      data: {
+        product: populatedProduct,
+        categoryName: populatedProduct.categoryId?.name || null,
+        quantity: inventory ? inventory.quantity : 0
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
