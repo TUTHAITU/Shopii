@@ -44,23 +44,29 @@ export default function UpdateProduct({ targetProduct, onUpdated, open, handleCl
     const [snackbar, setSnackbar] = React.useState({ open: false, msg: '', severity: 'success' });
 
     React.useEffect(() => {
-        axios.get('http://localhost:9999/api/seller/products?skipAuth=true')
-            .then(res => setCategories(res.data.data))
-            .catch(() => setCategories([]));
-    }, []);
-    const cate = React.useMemo(() => {
-        if (!categories || categories.length === 0) return [];
-        const allCategories = categories
-            .map(p => p.productId?.categoryId)
-            .filter(Boolean);
-        const map = new Map();
-        allCategories.forEach(cat => {
-            if (cat && cat._id && !map.has(cat._id)) {
-                map.set(cat._id, cat);
-            }
-        });
-        return Array.from(map.values());
-    }, [categories]);
+        axios.get('http://localhost:9999/api/seller/categories?skipAuth=true')
+          .then(res => setCategories(res.data.data))
+          .catch(() => setCategories([]));
+      }, []);
+    
+    // React.useEffect(() => {
+    //     axios.get('http://localhost:9999/api/seller/products?skipAuth=true')
+    //         .then(res => setCategories(res.data.data))
+    //         .catch(() => setCategories([]));
+    // }, []);
+    // const cate = React.useMemo(() => {
+    //     if (!categories || categories.length === 0) return [];
+    //     const allCategories = categories
+    //         .map(p => p.productId?.categoryId)
+    //         .filter(Boolean);
+    //     const map = new Map();
+    //     allCategories.forEach(cat => {
+    //         if (cat && cat._id && !map.has(cat._id)) {
+    //             map.set(cat._id, cat);
+    //         }
+    //     });
+    //     return Array.from(map.values());
+    // }, [categories]);
 
     React.useEffect(() => {
         setTitle(targetProduct?.productId?.title || '');
@@ -137,7 +143,7 @@ export default function UpdateProduct({ targetProduct, onUpdated, open, handleCl
                                     fullWidth required
                                     value={categoryId}
                                     onChange={e => setCategoryId(e.target.value)}>
-                                    {cate.map(cate => (
+                                    {categories.map(cate => (
                                         <MenuItem key={cate._id} value={cate._id}>{cate.name}</MenuItem>
                                     ))}
                                 </TextField>

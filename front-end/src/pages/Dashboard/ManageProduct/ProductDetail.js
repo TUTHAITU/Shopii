@@ -89,7 +89,7 @@ const ProductDetail = () => {
         </Typography>
         <Typography variant="body2" mb={1}>
           <b>Status:</b>{" "}
-          {productDetail.productId.isAuction ? "Auction" : "Normal"}
+          {productDetail.productId.isAuction ? "Action" : "Normal"}
         </Typography>
         <Typography variant="body2" mb={1}>
           <b>In Stock:</b> {productDetail.quantity}
@@ -100,12 +100,12 @@ const ProductDetail = () => {
             ? new Date(productDetail.lastUpdated).toLocaleString()
             : "N/A"}
         </Typography>
-        <Typography variant="body2" color="text.secondary" mb={1}>
+        {/* <Typography variant="body2" color="text.secondary" mb={1}>
           <b>Auction End:</b>{" "}
           {productDetail.productId.auctionEndTime
             ? new Date(productDetail.productId.auctionEndTime).toLocaleString()
             : ""}
-        </Typography>
+        </Typography> */}
       </Grid>
     </Grid>
   </Paper>

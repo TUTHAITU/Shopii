@@ -20,15 +20,23 @@ router.post("/products", sellerController.createProduct);
 router.get("/products", sellerController.getProducts);
 router.put("/products/:id", sellerController.updateProduct);
 router.delete("/products/:id", sellerController.deleteProduct);
+router.get('/categories', sellerController.getAllCategories);
+router.post('/categories', sellerController.addNewCategory);
+
+// Quản lý tồn kho
+router.get("/inventory", sellerController.getInventory);
+router.put("/inventory/:productId", sellerController.updateInventory);
 
 // Lấy chi tiết 1 sản phẩm
 router.get("/products/:id", sellerController.getProductById);
 // Lấy review theo productId
 router.get("/products/:id/reviews", sellerController.getReviewsByProductId);
 
-// Quản lý tồn kho
-router.get("/inventory", sellerController.getInventory);
-router.put("/inventory/:productId", sellerController.updateInventory);
+
+
+
+
+
 
 // Quản lý đơn hàng
 router.post("/orders/:orderId/confirm", sellerController.confirmOrder);

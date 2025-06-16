@@ -78,6 +78,45 @@ exports.updateStoreProfile = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// Lấy tất cả danh mục
+exports.getAllCategories = async (req, res) => {
+  try {
+    const categories = await Category.find();
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({ success: false, message: "No categories found" });
+    }
+    res.json({ success: true, data: categories });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+exports.addNewCategory = async (req, res) => {
+  try {
+    const { name, description } = req.body;
+
+    // Kiểm tra xem category đã tồn tại chưa
+    const existingCategory = await Category.findOne({ name });
+    if (existingCategory) {
+      return res.status(400).json({ success: false, message: "Category already exists" });
+    }
+
+    // Tạo mới category
+    const newCategory = new Category({
+      name,
+      description
+    });
+
+    await newCategory.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Category added successfully!",
+      data: newCategory
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // Đăng bán sản phẩm mới
 exports.createProduct = async (req, res) => {

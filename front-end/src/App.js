@@ -11,44 +11,19 @@ import FooterBottom from "./components/home/Footer/FooterBottom";
 import Header from "./components/home/Header/Header";
 import HeaderBottom from "./components/home/Header/HeaderBottom";
 import SpecialCase from "./components/SpecialCase/SpecialCase";
-// import About from "./pages/About/About";
-// import SignIn from "./pages/Account/SignIn";
-// import SignUp from "./pages/Account/SignUp";
-// import Cart from "./pages/Cart/Cart";
-// import Contact from "./pages/Contact/Contact";
-// import Home from "./pages/Home/Home";
-// import Journal from "./pages/Journal/Journal";
-// import Offer from "./pages/Offer/Offer";
-// import Payment from "./pages/payment/Payment";
-// import ProductDetails from "./pages/ProductDetails/ProductDetails";
-// import Shop from "./pages/Shop/Shop";
+
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ManagerDashboardLaydout from "./pages/Dashboard/ManagerDashboardLaydout";
-// import AdminDashboardLaydout from "./pages/Dashboard/AdminDashboardLaydout";
 import ManageProduct from "./pages/Dashboard/ManageProduct/ManageProduct";
 import ProductDetail from "./pages/Dashboard/ManageProduct/ProductDetail";
 import ManageStoreProfile from "./pages/Dashboard/ManageStoreProfile/ManageStoreProfile";
-// import ManageAccount from "./pages/Dashboard/ManageAccount/ManageAccount"
-// import ForgotPassword from "./pages/Account/ForgotPassword";
-// import ResendVerificationEmail from "./pages/Account/ResendVerificationEmail";
-// import ResetPassword from "./pages/Account/ResetPassword";
+import ManageInventory from "./pages/Dashboard/ManageProduct/ManageInventory";
+
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { fetchCart } from "./redux/slices/cart.slice";
-// import Checkout from "./pages/Checkout/checkout";
-// import MyOrders from "./pages/MyOrder/MyOrders";
-// import Profile from "./pages/Profile/Profile";
-// import ManageOrder from './pages/Dashboard/ManageOrder/ManageOrder';
-// import CreateOrder from "./pages/Dashboard/ManageOrder/CreateOrder";
-// import EditOrder from "./pages/Dashboard/ManageOrder/EditOrder";
-// import VnpayReturnHandler from "./pages/Thank/VnpayReturnHandler";
-// import VerifyEmail from "./pages/Account/VerifyEmail";
-// import ErrorPage from "./pages/ErrorPage/ErrorPage";
-// import MyProfile from "./pages/Dashboard/MyProfile/MyProfile";
-// import ManageProfit from "./pages/Dashboard/ManageProfit/ManageProfit";
-// import PayOSReturnHandler from "./pages/Thank/PayOSReturnHandler";
-// import CancelReturnHandler from "./pages/Thank/CancelReturnHandler";
+
 const Layout = () => {
   return (
     <div>
@@ -99,6 +74,7 @@ const router = createBrowserRouter(
       </Route> */}
       <Route path="/" element={<ManagerDashboardLaydout />}>
         <Route path="/manage-product" element={<ManageProduct />}></Route>
+        <Route path="/manage-inventory" element={<ManageInventory />} />
         <Route path="/manage-store" element={<ManageStoreProfile />}></Route>
         <Route path="/product/:id" element={<ProductDetail />} />
         {/* <Route path="/manage-order" element={<ManageOrder />}></Route>

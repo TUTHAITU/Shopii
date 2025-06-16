@@ -16,8 +16,6 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListSubheader from '@mui/material/ListSubheader';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import InventoryIcon from '@mui/icons-material/Inventory';
 import AccountBoxIcon from '@mui/icons-material/AccountBox';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import Link from '@mui/material/Link';
@@ -26,6 +24,8 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import AuthenService from '../../services/api/AuthenService';
 import { resetUserInfo } from "../../redux/slices/orebi.slice";
 import { useDispatch } from "react-redux";
+import WarehouseIcon from '@mui/icons-material/Warehouse';   // Tồn kho
+import StorefrontIcon from '@mui/icons-material/Storefront';
 
 import {
   Outlet,
@@ -115,12 +115,8 @@ export default function ManagerDashboardLaydout() {
     navigate("/manage-store");
   };
 
-  const handleOnclickOrders = () => {
-    navigate("/manage-order");
-  }
-
-  const handleOnclickMyProfile = () => {
-    navigate("/my-profile");
+  const handleOnclickInventory = () => {
+    navigate("/manage-inventory");
   }
 
   const handleOnclickSignout = async () => {
@@ -136,7 +132,7 @@ export default function ManagerDashboardLaydout() {
         <AppBar position="absolute" open={open}>
           <Toolbar
             sx={{
-              pr: '24px', 
+              pr: '24px',
             }}
           >
             <IconButton
@@ -187,11 +183,18 @@ export default function ManagerDashboardLaydout() {
               </ListItemButton>
               <ListItemButton onClick={handleOnclickProducts}>
                 <ListItemIcon>
-                  <InventoryIcon />
+                  <StorefrontIcon />
                 </ListItemIcon>
                 <ListItemText primary="Products" />
               </ListItemButton>
-            
+              <ListItemButton onClick={handleOnclickInventory}>
+                <ListItemIcon>
+                  <WarehouseIcon />
+                </ListItemIcon>
+                <ListItemText primary="Inventory" />
+              </ListItemButton>
+
+
             </React.Fragment>
             <Divider sx={{ my: 1 }} />
             <React.Fragment>

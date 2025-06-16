@@ -9,7 +9,7 @@ import Stack from '@mui/material/Stack';
 import { useNavigate } from 'react-router-dom';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Tooltip from '@mui/material/Tooltip';
-import { Button, Checkbox, Collapse, FormControlLabel, FormGroup } from '@mui/material';
+import { Alert, Button, Checkbox, Collapse, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, FormGroup, Snackbar } from '@mui/material';
 import { Grid } from '@mui/material';
 import { TextField } from '@mui/material';
 import Typography from '@mui/material/Typography';
@@ -21,11 +21,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import UpdateProduct from './UpdateProduct'; // Đường dẫn đúng file của bạn
+// import AddProduct from './AddProduct';
 
-export default function Products() {
+export default function Products({ products, onProductUpdated }) {
   const navigate = useNavigate();
   const [keywords, setKeywords] = React.useState('');
-  const [productData, setProductData] = React.useState([]);
+  // const [productData, setProductData] = React.useState([]);
   const [selectedCategories, setSelectedCategories] = React.useState([]);
   const [categoryOpen, setCategoryOpen] = React.useState(true);
   const [actionFilter, setActionFilter] = React.useState('all');
@@ -34,18 +35,47 @@ export default function Products() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [editingProduct, setEditingProduct] = React.useState(null);
 
+  const [deletingProduct, setDeletingProduct] = React.useState(null);
+  const [snackbar, setSnackbar] = React.useState({ open: false, msg: '', severity: 'success' });
 
-  React.useEffect(() => {
-    axios.get("http://localhost:9999/api/seller/products?skipAuth=true")
-      .then((res) => setProductData(res.data.data))
-      .catch((error) => console.error("Error fetching projects:", error));
-  }, []);
+  const handleDeleteProduct = async () => {
+    if (!deletingProduct) return;
+    try {
+      await axios.delete(`http://localhost:9999/api/seller/products/${deletingProduct.productId._id}?skipAuth=true`);
+      setSnackbar({ open: true, msg: 'Xóa sản phẩm thành công!', severity: 'success' });
+      setDeletingProduct(null);
+      onProductUpdated(); // Reload lại list từ parent
+    } catch (error) {
+      setSnackbar({ open: true, msg: 'Lỗi khi xóa sản phẩm!', severity: 'error' });
+      setDeletingProduct(null);
+    }
+  };
+
+
+  // React.useEffect(() => {
+  //   axios.get("http://localhost:9999/api/seller/products?skipAuth=true")
+  //     .then((res) => setProductData(res.data.data))
+  //     .catch((error) => console.error("Error fetching projects:", error));
+  // }, []);
 
 
   // Lấy unique categories từ dữ liệu
+  // const categories = React.useMemo(() => {
+  //   if (!productData || productData.length === 0) return [];
+  //   const allCategories = productData
+  //     .map(p => p.productId?.categoryId)
+  //     .filter(Boolean);
+  //   const map = new Map();
+  //   allCategories.forEach(cat => {
+  //     if (cat && cat._id && !map.has(cat._id)) {
+  //       map.set(cat._id, cat);
+  //     }
+  //   });
+  //   return Array.from(map.values());
+  // }, [productData]);
   const categories = React.useMemo(() => {
-    if (!productData || productData.length === 0) return [];
-    const allCategories = productData
+    if (!products || products.length === 0) return [];
+    const allCategories = products
       .map(p => p.productId?.categoryId)
       .filter(Boolean);
     const map = new Map();
@@ -55,10 +85,10 @@ export default function Products() {
       }
     });
     return Array.from(map.values());
-  }, [productData]);
+  }, [products]);
 
   const sortedData = React.useMemo(() => {
-    let filtered = productData;
+    let filtered = products;
 
     // 1. Lọc theo từ khoá
     if (keywords.trim() !== "") {
@@ -98,7 +128,7 @@ export default function Products() {
       }
       return 0;
     });
-  }, [productData, selectedCategories, sortBy, actionFilter, keywords]);
+  }, [products, selectedCategories, sortBy, actionFilter, keywords]);
 
   const PRODUCTS_PER_PAGE = 10;
   const totalPages = Math.ceil(sortedData.length / PRODUCTS_PER_PAGE);
@@ -129,12 +159,37 @@ export default function Products() {
     });
   };
 
-  const handleSearchByKeywords = () => {
-    setCurrentPage(1);
-  };
+  // const handleSearchByKeywords = () => {
+  //   setCurrentPage(1);
+  // };
 
   return (
+
     <React.Fragment>
+      <Dialog
+        open={Boolean(deletingProduct)}
+        onClose={() => setDeletingProduct(null)}
+      >
+        <DialogTitle>Xác nhận xoá sản phẩm</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn có chắc chắn muốn xoá sản phẩm <b>{deletingProduct?.productId?.title}</b> này không? Hành động này không thể hoàn tác.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeletingProduct(null)} color="secondary">Huỷ</Button>
+          <Button onClick={handleDeleteProduct} color="error" variant="contained">Xoá</Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={2500}
+        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity={snackbar.severity}>{snackbar.msg}</Alert>
+      </Snackbar>
+
       <Grid>
         <Grid container spacing={2} mb={3} justifyContent="center" alignItems="center">
           <Grid item xs={8} md={6}>
@@ -144,12 +199,13 @@ export default function Products() {
               onChange={(e) => setKeywords(e.target.value)}
               size="small"
               fullWidth
-              id="outlined-basic"
+              // id="outlined-basic"
               label="Search by name product"
-              variant="outlined"
+              // variant="outlined"
+              InputProps={{ endAdornment: <SearchIcon /> }}
             />
           </Grid>
-          <Grid item xs={4} md={2}>
+          {/* <Grid item xs={4} md={2}>
             <Button
               onClick={handleSearchByKeywords}
               variant="contained"
@@ -159,7 +215,7 @@ export default function Products() {
             >
               Search
             </Button>
-          </Grid>
+          </Grid> */}
         </Grid>
 
         <Grid container>
@@ -238,14 +294,14 @@ export default function Products() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell ><Typography color="primary" style={{ cursor: 'pointer' }} onClick={() => handleSortProduct("title")}>Name</Typography></TableCell>
-                  <TableCell ><Typography color="primary" >Action</Typography></TableCell>
-                  <TableCell ><Typography color="primary" >Quantity</Typography></TableCell>
-                  <TableCell ><Typography color="primary" >Description</Typography></TableCell>
-                  <TableCell ><Typography color="primary" >Image</Typography></TableCell>
-                  <TableCell ><Typography color="primary" >Price</Typography></TableCell>
-                  <TableCell ><Typography color="primary" >Category</Typography></TableCell>
-                  <TableCell ><Typography color="primary" >Tool</Typography></TableCell>
+                  <TableCell ><b color="primary" style={{ cursor: 'pointer' }} onClick={() => handleSortProduct("title")}>Name</b></TableCell>
+                  <TableCell ><b color="primary" >Image</b></TableCell>
+                  <TableCell ><b color="primary" >Description</b></TableCell>
+                  <TableCell ><b color="primary" >Price</b></TableCell>
+                  <TableCell ><b color="primary" >Quantity</b></TableCell>
+                  <TableCell ><b color="primary" >Action</b></TableCell>
+                  <TableCell ><b color="primary" >Category</b></TableCell>
+                  <TableCell ><b color="primary" >Tool</b></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -259,14 +315,13 @@ export default function Products() {
                         {product.productId?.title}
                       </Typography>
                     </TableCell>
-
-                    <TableCell>{product.productId?.isAuction ? "Available" : "Not Available"}</TableCell>
-                    <TableCell>{product.quantity}</TableCell>
-                    <TableCell>{product.productId?.description}</TableCell>
                     <TableCell>
                       <img src={product.productId?.image} alt="product" width={100} height={100} />
                     </TableCell>
+                    <TableCell>{product.productId?.description}</TableCell>
                     <TableCell>{`$${product.productId?.price}`}</TableCell>
+                    <TableCell>{product.quantity}</TableCell>
+                    <TableCell>{product.productId?.isAuction ? "Available" : "Not Available"}</TableCell>
                     <TableCell>{product.productId?.categoryId.name}</TableCell>
                     <TableCell>
                       <Tooltip title="Update">
@@ -277,8 +332,11 @@ export default function Products() {
                         />
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <DeleteIcon color="error" style={{ cursor: 'pointer' }} />
+                        <DeleteIcon color="error" style={{ cursor: 'pointer' }}
+                          onClick={() => setDeletingProduct(product)}
+                        />
                       </Tooltip>
+
                     </TableCell>
                   </TableRow>
                 ))}
@@ -295,7 +353,20 @@ export default function Products() {
                 sx={{ display: 'flex', justifyContent: 'center' }}
               />
             </Stack>
-           {editingProduct && (
+
+            {editingProduct && (
+              <UpdateProduct
+                targetProduct={editingProduct}
+                onUpdated={() => {
+                  // Update the product list locally without calling the API again
+                  onProductUpdated();
+                  setEditingProduct(null);
+                }}
+                open={Boolean(editingProduct)}
+                handleClose={() => setEditingProduct(null)}
+              />
+            )}
+            {/* {editingProduct && (
   <UpdateProduct
     targetProduct={editingProduct}
     onUpdated={() => {
@@ -307,14 +378,20 @@ export default function Products() {
     open={Boolean(editingProduct)}
     handleClose={() => setEditingProduct(null)}
   />
-)}
-
+  
+)} */}
+            {/* <AddProduct onAdded={() => {
+  // Reload product list after adding a new product
+  axios.get("http://localhost:9999/api/seller/products?skipAuth=true")
+    .then((res) => setProductData(res.data.data));
+}} /> */}
 
           </Grid>
 
         </Grid>
       </Grid>
-     
+
     </React.Fragment>
+
   );
 }
