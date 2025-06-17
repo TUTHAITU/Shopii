@@ -26,6 +26,10 @@ import { resetUserInfo } from "../../redux/slices/orebi.slice";
 import { useDispatch } from "react-redux";
 import WarehouseIcon from '@mui/icons-material/Warehouse';   // Tồn kho
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import WidgetsIcon from '@mui/icons-material/Widgets';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import FeedbackIcon from '@mui/icons-material/Feedback';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 
 import {
   Outlet,
@@ -119,6 +123,11 @@ export default function ManagerDashboardLaydout() {
     navigate("/manage-inventory");
   }
 
+  const handleOnclickOrder = () => {
+    navigate("/manage-order");
+  };
+
+
   const handleOnclickSignout = async () => {
     await AuthenService.logout();
     dispatch(resetUserInfo());
@@ -177,13 +186,13 @@ export default function ManagerDashboardLaydout() {
             <React.Fragment>
               <ListItemButton>
                 <ListItemIcon>
-                  <DashboardIcon />
+                  <StorefrontIcon />
                 </ListItemIcon>
                 <ListItemText primary="Dashboard" />
               </ListItemButton>
               <ListItemButton onClick={handleOnclickProducts}>
                 <ListItemIcon>
-                  <StorefrontIcon />
+                  <WidgetsIcon />
                 </ListItemIcon>
                 <ListItemText primary="Products" />
               </ListItemButton>
@@ -192,6 +201,24 @@ export default function ManagerDashboardLaydout() {
                   <WarehouseIcon />
                 </ListItemIcon>
                 <ListItemText primary="Inventory" />
+              </ListItemButton>
+              <ListItemButton onClick={handleOnclickOrder}>
+                <ListItemIcon>
+                  <ReceiptLongIcon />
+                </ListItemIcon>
+                <ListItemText primary="Order History" />
+              </ListItemButton>
+              <ListItemButton>
+                <ListItemIcon>
+                  <ConfirmationNumberIcon />
+                </ListItemIcon>
+                <ListItemText primary="Voucher" />
+              </ListItemButton>
+              <ListItemButton>
+                <ListItemIcon>
+                  <FeedbackIcon />
+                </ListItemIcon>
+                <ListItemText primary="Complaint" />
               </ListItemButton>
 
 

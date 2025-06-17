@@ -194,7 +194,7 @@ export default function Products({ products, onProductUpdated }) {
         <Grid container spacing={2} mb={3} justifyContent="center" alignItems="center">
           <Grid item xs={8} md={6}>
             <TextField
-              required
+              // required
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
               size="small"

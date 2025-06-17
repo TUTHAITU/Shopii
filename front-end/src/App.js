@@ -19,6 +19,7 @@ import ManageProduct from "./pages/Dashboard/ManageProduct/ManageProduct";
 import ProductDetail from "./pages/Dashboard/ManageProduct/ProductDetail";
 import ManageStoreProfile from "./pages/Dashboard/ManageStoreProfile/ManageStoreProfile";
 import ManageInventory from "./pages/Dashboard/ManageProduct/ManageInventory";
+import ManageOrder from "./pages/Dashboard/ManageOrder/ManageOrderHistory";
 
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
@@ -77,7 +78,8 @@ const router = createBrowserRouter(
         <Route path="/manage-inventory" element={<ManageInventory />} />
         <Route path="/manage-store" element={<ManageStoreProfile />}></Route>
         <Route path="/product/:id" element={<ProductDetail />} />
-        {/* <Route path="/manage-order" element={<ManageOrder />}></Route>
+        <Route path="/manage-order" element={<ManageOrder />}></Route>
+        {/* 
         <Route path="/create-order" element={<CreateOrder />}></Route>
         <Route path="/my-profile" element={<MyProfile />}></Route>
         <Route path="/update-order/:orderId" element={<EditOrder />}></Route> */}

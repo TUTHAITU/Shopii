@@ -39,6 +39,7 @@ router.get("/products/:id/reviews", sellerController.getReviewsByProductId);
 
 
 // Quản lý đơn hàng
+router.get("/orders/history", sellerController.getOrderHistory);
 router.post("/orders/:orderId/confirm", sellerController.confirmOrder);
 
 // Đánh giá và phản hồi

@@ -16,7 +16,7 @@ export default function ManageInventory() {
     }, [handleSetDashboardTitle]);
 
     const [inventoryList, setInventoryList] = React.useState([]);
-    const [editIndex, setEditIndex] = React.useState(null);
+    const [editProductId, setEditProductId] = React.useState(null);
     const [editQuantity, setEditQuantity] = React.useState(0);
     const [search, setSearch] = React.useState('');
     const [snackbar, setSnackbar] = React.useState({ open: false, msg: '', severity: 'success' });
@@ -35,17 +35,6 @@ export default function ManageInventory() {
         fetchInventory();
     }, [fetchInventory]);
 
-    //     const fetchInventory = React.useCallback(() => {
-    //     axios.get("http://localhost:9999/api/seller/inventory?skipAuth=true")
-    //       .then(res => setInventoryList(res.data.data))
-    //       .catch(() => setInventoryList([]));
-    //   }, []);
-
-    //   React.useEffect(() => {
-    //     fetchInventory();
-    //   }, [fetchInventory]);
-
-
     // Lọc tìm kiếm
     const filteredList = React.useMemo(() => {
         if (!search.trim()) return inventoryList;
@@ -61,25 +50,23 @@ export default function ManageInventory() {
         return filteredList.slice(start, start + ITEMS_PER_PAGE);
     }, [filteredList, currentPage]);
 
-    // Reset về trang đầu khi search/filter đổi
     React.useEffect(() => {
         setCurrentPage(1);
     }, [search]);
 
-    // Xử lý bấm nút chỉnh sửa
-    const handleEditClick = (idx, quantity) => {
-        setEditIndex(idx);
+    const handleEditClick = (productId, quantity) => {
+        setEditProductId(productId);
         setEditQuantity(quantity);
     };
 
-    // Xử lý lưu số lượng tồn kho mới
     const handleSaveClick = async (productId) => {
         try {
             await axios.put(`http://localhost:9999/api/seller/inventory/${productId}?skipAuth=true`, {
                 quantity: editQuantity
             });
             setSnackbar({ open: true, msg: "Update thành công!", severity: 'success' });
-            setEditIndex(null);
+            setEditProductId(null);
+
             fetchInventory();
         } catch (e) {
             setSnackbar({ open: true, msg: "Có lỗi xảy ra!", severity: 'error' });
@@ -88,9 +75,6 @@ export default function ManageInventory() {
 
     return (
         <Paper sx={{ p: 3 }}>
-            {/* <Typography variant="h4" sx={{ mb: 2, fontWeight: 700, color: "primary.main" }}>
-                Quản lý tồn kho sản phẩm
-            </Typography> */}
             <TextField
                 label="Search by name product"
                 value={search}
@@ -128,7 +112,7 @@ export default function ManageInventory() {
                                     <TableCell>{item.productId?.description}</TableCell>
                                     <TableCell>{item.productId.categoryId?.name || "N/A"}</TableCell>
                                     <TableCell align="right">
-                                        {editIndex === idx ? (
+                                        {editProductId === item.productId._id ? (
                                             <TextField
                                                 type="number"
                                                 size="small"
@@ -142,12 +126,12 @@ export default function ManageInventory() {
                                         )}
                                     </TableCell>
                                     <TableCell align="center">
-                                        {editIndex === idx ? (
+                                        {editProductId === item.productId._id ? (
                                             <IconButton color="primary" onClick={() => handleSaveClick(item.productId._id)}>
                                                 <SaveIcon />
                                             </IconButton>
                                         ) : (
-                                            <IconButton color="primary" onClick={() => handleEditClick(idx, item.quantity)}>
+                                            <IconButton color="primary" onClick={() => handleEditClick(item.productId._id, item.quantity)}>
                                                 <EditIcon />
                                             </IconButton>
                                         )}
