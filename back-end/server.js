@@ -1,57 +1,51 @@
-// const express = require("express");
-// const dotenv = require("dotenv");
-// const cors = require("cors");
-// const bodyParser = require("body-parser");
-// const morgan = require("morgan");
-
-// // Import các router
-// const routes = require("./routers/index.js");
-
-// // Kết nối với MongoDB
-// const ConnectDB = require("./config/db");
-// const app = express();
-
-// // app.get('/', async(req, res)=>{
-// //     try {
-// //         res.send({message: 'Welcome to Practical Exam!'});
-// //     } catch (error) {
-// //         res.send({error: error.message});
-// //     }
-// // });
-
-// // Sử dụng dotenv để load các biến môi trường
-// dotenv.config();
-
-// // Middleware
-// app.use(cors()); // Cho phép CORS
-// app.use(bodyParser.json()); // Phân tích cú pháp JSON
-// app.use(morgan("dev")); // Ghi lại các log HTTP
-
-// // Kết nối MongoDB
-// ConnectDB();
-
-// // Sử dụng các router cho các API endpoint
-// app.use("/api", routes); // Tất cả các route sẽ bắt đầu bằng /api
-
-// const PORT = process.env.PORT || 9999;
-// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const express = require("express");
 const { connect } = require("mongoose");
 const router = require("./src/routers/index.js");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const http = require('http');
+const socketIo = require('socket.io');
+const cloudinary = require('cloudinary').v2;
+
+require('dotenv').config();
+// Load environment variables
+dotenv.config();
+
+// Verify critical environment variables
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  console.error('Error: EMAIL_USER or EMAIL_PASS is missing in .env file');
+  process.exit(1);
+}
+if (!process.env.MONGO_URI) {
+  console.error('Error: MONGO_URI is missing in .env file');
+  process.exit(1);
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-dotenv.config();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
-connect(MONGO_URI);
+
+connect(MONGO_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
+
+// In server.js, replace the cloudinary.config with actual credentials
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const server = http.createServer(app);
 
 app.use("/api", router);
 
-app.listen(PORT, () => {
-  console.log(`server is running at PORT ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server is running at PORT ${PORT}`);
 });

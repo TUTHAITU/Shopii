@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 const disputeSchema = new Schema(
   {
-    orderId: { type: Schema.Types.ObjectId, ref: "Order", required: true },
+    orderItemId: { type: Schema.Types.ObjectId, ref: "OrderItem", required: true },
     raisedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     description: { type: String, required: true },
     status: {

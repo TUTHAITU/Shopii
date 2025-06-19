@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 const returnRequestSchema = new Schema(
   {
-    orderId: { type: Schema.Types.ObjectId, ref: "Order", required: true },
+    orderItemId: { type: Schema.Types.ObjectId, ref: "OrderItem", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     reason: { type: String, required: true },
     status: {

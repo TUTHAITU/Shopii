@@ -1,9 +1,12 @@
 const express = require("express");
-const adminRouter = require("./admin");
-const sellerRouter = require("./seller");
+const sellerRouter = require("./sellerRouter");
+const buyerRouter = require('./buyerRouter');
 const router = express.Router();
+const multer = require('multer');
 
-router.use("/admin", adminRouter);
-router.use("/seller", sellerRouter);
+router.use("/sellers", sellerRouter);
+router.use('/buyers', buyerRouter);
+
+// Định nghĩa route cho tìm kiếm bằng hình ảnh
 
 module.exports = router;

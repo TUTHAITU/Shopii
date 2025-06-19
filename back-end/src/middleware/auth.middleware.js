@@ -1,63 +1,3 @@
-// const jwt = require('jsonwebtoken');
-// const { User } = require('../models');
-// const logger = require('../utils/logger');
-
-
-// /**
-//  * Authentication middleware
-//  */
-// exports.authMiddleware = async (req, res, next) => {
-//   try {
-//     // Get token from header
-//     const authHeader = req.headers.authorization;
-    
-//     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-//       return res.status(401).json({
-//         success: false,
-//         message: 'No token provided, authorization denied'
-//       });
-//     }
-
-//     // Verify token
-//     const token = authHeader.split(' ')[1];
-    
-//     try {
-//       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-//       // Add user from payload
-//       req.user = decoded;
-//       next();
-//     } catch (error) {
-//       logger.error('Token verification error:', error);
-//       return res.status(401).json({
-//         success: false,
-//         message: 'Token is not valid'
-//       });
-//     }
-//   } catch (error) {
-//     logger.error('Auth middleware error:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Server Error'
-//     });
-//   }
-// };
-
-// /**
-//  * Role-based authorization middleware
-//  * @param {Array} roles - Array of allowed roles
-//  */
-// exports.authorizeRoles = (...roles) => {
-//   return (req, res, next) => {
-//     if (!roles.includes(req.user.role)) {
-//       return res.status(403).json({
-//         success: false,
-//         message: `Role (${req.user.role}) is not allowed to access this resource`
-//       });
-//     }
-//     next();
-//   };
-// };
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const logger = require('../utils/logger');
@@ -67,15 +7,30 @@ const logger = require('../utils/logger');
  */
 const authMiddleware = async (req, res, next) => {
   try {
-    // ✅ Bỏ qua xác thực khi test bằng Postman (nếu có ?skipAuth=true)
+    // Skip authentication when testing with Postman (if ?skipAuth=true&role=<role>&id=<id>)
     if (req.query.skipAuth === 'true') {
+      const role = req.query.role || 'buyer'; // Default to 'buyer' if not specified
+      if (!['buyer', 'seller', 'admin'].includes(role)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid role specified for testing'
+        });
+      }
+      const id = req.query.id; // Get id from query, no default
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID is required in query when skipAuth is true'
+        });
+      }
       req.user = {
-        id: '67fe591581ab555c417197be',
-        role: 'seller', // hoặc 'seller' để test vai trò khác
+        id: id,
+        role: role,
         name: 'Test'
       };
       return next();
     }
+
 
     // Get token from header
     const authHeader = req.headers.authorization;
@@ -152,9 +107,22 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+// Middleware to check buyer role
+const isBuyer = (req, res, next) => {
+  if (req.user && req.user.role === 'buyer') {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      message: 'Access denied. Buyer role required.',
+    });
+  }
+};
+
 module.exports = {
   authMiddleware,
   authorizeRoles,
   isSeller,
-  isAdmin
+  isAdmin,
+  isBuyer
 };
