@@ -20,7 +20,8 @@ import ProductDetail from "./pages/Dashboard/ManageProduct/ProductDetail";
 import ManageStoreProfile from "./pages/Dashboard/ManageStoreProfile/ManageStoreProfile";
 import ManageInventory from "./pages/Dashboard/ManageProduct/ManageInventory";
 import ManageOrder from "./pages/Dashboard/ManageOrder/ManageOrderHistory";
-
+import ManageDispute from "./pages/Dashboard/ManageDispute/ManageDispute";
+import ManageReturnRequest from "./pages/Dashboard/ManageReturnRequest/ManageReturnRequest";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { fetchCart } from "./redux/slices/cart.slice";
@@ -79,6 +80,8 @@ const router = createBrowserRouter(
         <Route path="/manage-store" element={<ManageStoreProfile />}></Route>
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/manage-order" element={<ManageOrder />}></Route>
+        <Route path="/manage-dispute" element={<ManageDispute />} />
+        <Route path="/manage-return-request" element={<ManageReturnRequest />} />
         {/* 
         <Route path="/create-order" element={<CreateOrder />}></Route>
         <Route path="/my-profile" element={<MyProfile />}></Route>

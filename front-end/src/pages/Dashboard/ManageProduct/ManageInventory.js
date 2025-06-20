@@ -1,13 +1,16 @@
 import * as React from "react";
 import {
     Table, TableHead, TableBody, TableRow, TableCell,
-    TableContainer, Paper, IconButton, TextField, Snackbar, Alert, Pagination, Stack
+    TableContainer, Paper, IconButton, TextField, Snackbar, Alert, Pagination, Stack,
+    MenuItem,
+    Box
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import SearchIcon from '@mui/icons-material/Search';
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
+import Checkbox from '@mui/material/Checkbox';
 
 export default function ManageInventory() {
     const { handleSetDashboardTitle } = useOutletContext();
@@ -21,6 +24,7 @@ export default function ManageInventory() {
     const [search, setSearch] = React.useState('');
     const [snackbar, setSnackbar] = React.useState({ open: false, msg: '', severity: 'success' });
     const [currentPage, setCurrentPage] = React.useState(1);
+    const [selectedCates, setSelectedCates] = React.useState([]);
 
     const ITEMS_PER_PAGE = 10;
 
@@ -35,13 +39,33 @@ export default function ManageInventory() {
         fetchInventory();
     }, [fetchInventory]);
 
+    const categories = React.useMemo(() => {
+        const map = new Map();
+        inventoryList.forEach(item => {
+            const cate = item.productId.categoryId;
+            if (cate && cate._id && !map.has(cate._id)) {
+                map.set(cate._id, cate);
+            }
+        });
+        return Array.from(map.values());
+    }, [inventoryList]);
+
     // Lọc tìm kiếm
     const filteredList = React.useMemo(() => {
-        if (!search.trim()) return inventoryList;
-        return inventoryList.filter(item =>
-            item.productId.title.toLowerCase().includes(search.trim().toLowerCase())
-        );
-    }, [inventoryList, search]);
+        let list = inventoryList;
+        if (search.trim()) {
+            list = list.filter(item =>
+                item.productId.title.toLowerCase().includes(search.trim().toLowerCase())
+            );
+        }
+        if (selectedCates.length > 0) {
+            list = list.filter(item =>
+                item.productId.categoryId && selectedCates.includes(item.productId.categoryId._id)
+            );
+        }
+        return list;
+    }, [inventoryList, search, selectedCates]);
+
 
     // Dữ liệu của trang hiện tại
     const totalPages = Math.ceil(filteredList.length / ITEMS_PER_PAGE);
@@ -52,7 +76,8 @@ export default function ManageInventory() {
 
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [search]);
+    }, [search, selectedCates]);
+
 
     const handleEditClick = (productId, quantity) => {
         setEditProductId(productId);
@@ -75,14 +100,46 @@ export default function ManageInventory() {
 
     return (
         <Paper sx={{ p: 3 }}>
-            <TextField
-                label="Search by name product"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                size="small"
-                sx={{ mb: 2, width: 320 }}
-                InputProps={{ endAdornment: <SearchIcon /> }}
-            />
+            <Box display="flex" alignItems="center" sx={{ mb: 2 }}>
+                <TextField
+                    label="Search by name product"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    size="small"
+                    sx={{ width: 320 }}
+                    InputProps={{ endAdornment: <SearchIcon /> }}
+                />
+                <TextField
+                    select
+                    label="Category"
+                    size="small"
+                    value={selectedCates}
+                    onChange={e => setSelectedCates(
+                        typeof e.target.value === 'string'
+                            ? e.target.value.split(',')
+                            : e.target.value
+                    )}
+                    SelectProps={{
+                        multiple: true,
+                        renderValue: (selected) => {
+                            if (selected.length === 0) return "All";
+                            return categories
+                                .filter(c => selected.includes(c._id))
+                                .map(c => c.name)
+                                .join(', ');
+                        }
+                    }}
+                    sx={{ width: 260, ml: "auto" }}  // Đẩy sang phải
+                >
+                    {categories.map(cate => (
+                        <MenuItem key={cate._id} value={cate._id}>
+                            <Checkbox checked={selectedCates.indexOf(cate._id) > -1} />
+                            {cate.name}
+                        </MenuItem>
+                    ))}
+                </TextField>
+            </Box>
+
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>

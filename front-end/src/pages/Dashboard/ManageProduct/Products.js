@@ -9,29 +9,25 @@ import Stack from '@mui/material/Stack';
 import { useNavigate } from 'react-router-dom';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Tooltip from '@mui/material/Tooltip';
-import { Alert, Button, Checkbox, Collapse, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, FormGroup, Snackbar } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, FormGroup, IconButton, Paper, Snackbar, TableContainer } from '@mui/material';
 import { Grid } from '@mui/material';
 import { TextField } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import SearchIcon from '@mui/icons-material/Search';
 import axios from "axios";
 import EditIcon from '@mui/icons-material/Edit';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import UpdateProduct from './UpdateProduct'; // Đường dẫn đúng file của bạn
-// import AddProduct from './AddProduct';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import ClearAllIcon from '@mui/icons-material/ClearAll';
+import Chip from '@mui/material/Chip';
 
 export default function Products({ products, onProductUpdated }) {
   const navigate = useNavigate();
   const [keywords, setKeywords] = React.useState('');
-  // const [productData, setProductData] = React.useState([]);
   const [selectedCategories, setSelectedCategories] = React.useState([]);
-  const [categoryOpen, setCategoryOpen] = React.useState(true);
   const [actionFilter, setActionFilter] = React.useState('all');
-  const [actionOpen, setActionOpen] = React.useState(true);
-  const [sortBy, setSortBy] = React.useState('');
   const [currentPage, setCurrentPage] = React.useState(1);
   const [editingProduct, setEditingProduct] = React.useState(null);
 
@@ -51,28 +47,6 @@ export default function Products({ products, onProductUpdated }) {
     }
   };
 
-
-  // React.useEffect(() => {
-  //   axios.get("http://localhost:9999/api/seller/products?skipAuth=true")
-  //     .then((res) => setProductData(res.data.data))
-  //     .catch((error) => console.error("Error fetching projects:", error));
-  // }, []);
-
-
-  // Lấy unique categories từ dữ liệu
-  // const categories = React.useMemo(() => {
-  //   if (!productData || productData.length === 0) return [];
-  //   const allCategories = productData
-  //     .map(p => p.productId?.categoryId)
-  //     .filter(Boolean);
-  //   const map = new Map();
-  //   allCategories.forEach(cat => {
-  //     if (cat && cat._id && !map.has(cat._id)) {
-  //       map.set(cat._id, cat);
-  //     }
-  //   });
-  //   return Array.from(map.values());
-  // }, [productData]);
   const categories = React.useMemo(() => {
     if (!products || products.length === 0) return [];
     const allCategories = products
@@ -113,24 +87,10 @@ export default function Products({ products, onProductUpdated }) {
     if (actionFilter === "notAvailable") {
       filtered = filtered.filter(p => p.productId.isAuction === false);
     }
+    return [...filtered];
+  }, [products, selectedCategories, actionFilter, keywords]);
 
-    // 4. Sort
-    const sortFields = sortBy
-      ? (Array.isArray(sortBy) ? sortBy : sortBy.split(','))
-      : [];
-    return [...filtered].sort((a, b) => {
-      for (let field of sortFields) {
-        let res = 0;
-        if (field === 'title') {
-          res = (a.productId.title || '').localeCompare(b.productId.title || '');
-        }
-        if (res !== 0) return res;
-      }
-      return 0;
-    });
-  }, [products, selectedCategories, sortBy, actionFilter, keywords]);
-
-  const PRODUCTS_PER_PAGE = 10;
+  const PRODUCTS_PER_PAGE = 5;
   const totalPages = Math.ceil(sortedData.length / PRODUCTS_PER_PAGE);
   const startIdx = (currentPage - 1) * PRODUCTS_PER_PAGE;
   const endIdx = startIdx + PRODUCTS_PER_PAGE;
@@ -139,7 +99,7 @@ export default function Products({ products, onProductUpdated }) {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategories, actionFilter, sortBy, keywords]);
+  }, [selectedCategories, actionFilter, keywords]);
 
 
   const handleCategoryChange = (categoryId) => {
@@ -149,19 +109,6 @@ export default function Products({ products, onProductUpdated }) {
         : [...prev, categoryId]
     );
   };
-
-  const handleSortProduct = (sortField) => {
-    setSortBy(prev => {
-      // Nếu đang sort tăng, thì đảo thành giảm, và ngược lại
-      if (prev === sortField) return '-' + sortField;
-      if (prev === '-' + sortField) return sortField;
-      return sortField;
-    });
-  };
-
-  // const handleSearchByKeywords = () => {
-  //   setCurrentPage(1);
-  // };
 
   return (
 
@@ -205,144 +152,167 @@ export default function Products({ products, onProductUpdated }) {
               InputProps={{ endAdornment: <SearchIcon /> }}
             />
           </Grid>
-          {/* <Grid item xs={4} md={2}>
-            <Button
-              onClick={handleSearchByKeywords}
-              variant="contained"
-              endIcon={<SearchIcon />}
-              fullWidth
-              sx={{ height: '40px', width: '80%' }}
-            >
-              Search
-            </Button>
-          </Grid> */}
         </Grid>
 
-        <Grid container>
-          <Grid item xs={2}>
-            {/* FilterCate */}
-            <div
-              style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-              onClick={() => setCategoryOpen((open) => !open)}
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={3}>
+            <Box
+              sx={{
+                borderRadius: 3,
+                bgcolor: 'background.paper',
+                p: 2,
+                mb: 3,
+                minWidth: 200,
+                maxWidth: 260
+
+              }}
             >
-              <Typography variant="h5"
-                sx={{
-                  userSelect: 'none',
-                  flex: 1,          // đẩy icon ra phía cuối
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                Category
-              </Typography>
-              {categoryOpen ? (
-                <ExpandLessIcon sx={{ ml: 1 }} />
-              ) : (
-                <ExpandMoreIcon sx={{ ml: 1 }} />
-              )}
-            </div>
-            <Collapse in={categoryOpen} timeout="auto" unmountOnExit>
-              <FormGroup>
-                {categories.map((cat) => (
-                  <FormControlLabel
-                    key={cat._id}
-                    control={
-                      <Checkbox
-                        checked={selectedCategories.includes(cat._id)}
-                        onChange={() => handleCategoryChange(cat._id)}
-                        name={cat.name}
-                        color="primary"
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                <Typography variant="subtitle2" color="text.secondary" letterSpacing={2}>
+                  <FilterAltIcon fontSize="small" sx={{ mr: 0.5, color: "primary.main" }} />
+                  FILTERS
+                </Typography>
+                {(selectedCategories.length > 0 || actionFilter !== 'all') && (
+                  <Tooltip title="Clear all">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSelectedCategories([]);
+                        setActionFilter('all');
+                      }}
+                    >
+                      <ClearAllIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
+
+              {/* Category */}
+              <Box mb={2}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  CATEGORY
+                </Typography>
+                <Box
+                  sx={{
+                    maxHeight: 160,
+                    overflowY: categories.length > 4 ? "auto" : "unset",
+                    mt: 1,
+                    pr: 1
+                  }}
+                >
+                  <FormGroup>
+                    {categories.map((cat) => (
+                      <FormControlLabel
+                        key={cat._id}
+                        control={
+                          <Checkbox
+                            checked={selectedCategories.includes(cat._id)}
+                            onChange={() => handleCategoryChange(cat._id)}
+                            size="small"
+                          />
+                        }
+                        label={<Typography variant="body2">{cat.name}</Typography>}
+                        sx={{ mb: 0.5 }}
                       />
-                    }
-                    label={cat.name}
-                  />
-                ))}
-              </FormGroup>
-            </Collapse>
-            {/* FilterAction */}
-            <div
-              style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-              onClick={() => setActionOpen((open) => !open)}
-            >
-              <Typography variant="h5"
-                sx={{
-                  userSelect: 'none',
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                Action
-              </Typography>
-              {actionOpen ? (
-                <ExpandLessIcon sx={{ ml: 1 }} />
-              ) : (
-                <ExpandMoreIcon sx={{ ml: 1 }} />
-              )}
-            </div>
-            <Collapse in={actionOpen} timeout="auto" unmountOnExit>
-              <RadioGroup
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-              >
-                <FormControlLabel value="all" control={<Radio />} label="All" />
-                <FormControlLabel value="available" control={<Radio />} label="Available" />
-                <FormControlLabel value="notAvailable" control={<Radio />} label="Not Available" />
-              </RadioGroup>
-            </Collapse>
+                    ))}
+                  </FormGroup>
+                </Box>
+              </Box>
+
+              {/* Action/Status */}
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  STATUS
+                </Typography>
+                <RadioGroup
+                  value={actionFilter}
+                  onChange={e => setActionFilter(e.target.value)}
+                  sx={{ mt: 1 }}
+                >
+                  <FormControlLabel value="all" control={<Radio size="small" />} label={<Typography variant="body2">All</Typography>} />
+                  <FormControlLabel value="available" control={<Radio size="small" />} label={<Typography variant="body2">Available</Typography>} />
+                  <FormControlLabel value="notAvailable" control={<Radio size="small" />} label={<Typography variant="body2">Not Available</Typography>} />
+                </RadioGroup>
+              </Box>
+            </Box>
           </Grid>
+          <Grid item xs={12} md={9}>
+            <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #ddd', boxShadow: 'none' }}>
+              <Table sx={{ borderCollapse: 'separate' }}>
 
-          <Grid item xs={10}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell ><b color="primary" style={{ cursor: 'pointer' }} onClick={() => handleSortProduct("title")}>Name</b></TableCell>
-                  <TableCell ><b color="primary" >Image</b></TableCell>
-                  <TableCell ><b color="primary" >Description</b></TableCell>
-                  <TableCell ><b color="primary" >Price</b></TableCell>
-                  <TableCell ><b color="primary" >Quantity</b></TableCell>
-                  <TableCell ><b color="primary" >Action</b></TableCell>
-                  <TableCell ><b color="primary" >Category</b></TableCell>
-                  <TableCell ><b color="primary" >Tool</b></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {pageData.map((product, index) => (
-                  <TableRow style={{ cursor: 'pointer' }} key={product.productId._id}>
-                    <TableCell>
-                      <Typography
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/product/${product.productId._id}`)}
-                      >
-                        {product.productId?.title}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <img src={product.productId?.image} alt="product" width={100} height={100} />
-                    </TableCell>
-                    <TableCell>{product.productId?.description}</TableCell>
-                    <TableCell>{`$${product.productId?.price}`}</TableCell>
-                    <TableCell>{product.quantity}</TableCell>
-                    <TableCell>{product.productId?.isAuction ? "Available" : "Not Available"}</TableCell>
-                    <TableCell>{product.productId?.categoryId.name}</TableCell>
-                    <TableCell>
-                      <Tooltip title="Update">
-                        <EditIcon
-                          color="primary"
-                          style={{ cursor: 'pointer', marginRight: 8 }}
-                          onClick={() => setEditingProduct(product)}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <DeleteIcon color="error" style={{ cursor: 'pointer' }}
-                          onClick={() => setDeletingProduct(product)}
-                        />
-                      </Tooltip>
-
-                    </TableCell>
+                <TableHead>
+                  <TableRow>
+                    <TableCell><b>Product</b></TableCell>
+                    <TableCell><b>Price</b></TableCell>
+                    <TableCell><b>Quantity</b></TableCell>
+                    <TableCell><b>Action</b></TableCell>
+                    <TableCell><b>Category</b></TableCell>
+                    <TableCell><b>Tool</b></TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {pageData.map((product, index) => (
+                    <TableRow style={{ cursor: 'pointer' }} key={product.productId._id}>
+                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                          <img
+                            src={product.productId?.image}
+                            alt="product"
+                            width={80}
+                            height={80}
+                            style={{ borderRadius: 8, objectFit: 'cover', border: '1px solid #eee' }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <Typography
+                              variant="subtitle1"
+                              fontWeight={600}
+                              onClick={() => navigate(`/product/${product.productId._id}`)}
+                              sx={{ cursor: 'pointer' }}
+                            >
+                              {product.productId?.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" mt={1}>
+                              <strong>ID: {product.productId?._id}</strong>
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" mt={1}>
+                              {product.productId?.description}
+                            </Typography>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>{`$${product.productId?.price}`}</TableCell>
+                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>{product.quantity}</TableCell>
+                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>
+                        {product.productId?.isAuction ? (
+                          <Chip label="Available" color="success" size="small" />
+                        ) : (
+                          <Chip label="Not Available" color="error" size="small" />
+                        )}
+                      </TableCell>
 
+                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>{product.productId?.categoryId.name}</TableCell>
+                      <TableCell>
+                        <Tooltip title="Update">
+                          <EditIcon
+                            color="primary"
+                            style={{ cursor: 'pointer', marginRight: 8 }}
+                            onClick={() => setEditingProduct(product)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <DeleteIcon
+                            color="error"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setDeletingProduct(product)}
+                          />
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+
+              </Table>
+            </TableContainer>
             <Stack spacing={2} sx={{ mt: 3 }}>
               <Pagination
                 page={currentPage}
@@ -358,7 +328,6 @@ export default function Products({ products, onProductUpdated }) {
               <UpdateProduct
                 targetProduct={editingProduct}
                 onUpdated={() => {
-                  // Update the product list locally without calling the API again
                   onProductUpdated();
                   setEditingProduct(null);
                 }}
@@ -366,26 +335,6 @@ export default function Products({ products, onProductUpdated }) {
                 handleClose={() => setEditingProduct(null)}
               />
             )}
-            {/* {editingProduct && (
-  <UpdateProduct
-    targetProduct={editingProduct}
-    onUpdated={() => {
-      // reload lại danh sách sản phẩm sau update
-      axios.get("http://localhost:9999/api/seller/products?skipAuth=true")
-        .then((res) => setProductData(res.data.data));
-      setEditingProduct(null);
-    }}
-    open={Boolean(editingProduct)}
-    handleClose={() => setEditingProduct(null)}
-  />
-  
-)} */}
-            {/* <AddProduct onAdded={() => {
-  // Reload product list after adding a new product
-  axios.get("http://localhost:9999/api/seller/products?skipAuth=true")
-    .then((res) => setProductData(res.data.data));
-}} /> */}
-
           </Grid>
 
         </Grid>

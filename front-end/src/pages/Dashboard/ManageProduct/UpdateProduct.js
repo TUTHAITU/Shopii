@@ -116,30 +116,23 @@ export default function UpdateProduct({ targetProduct, onUpdated, open, handleCl
         <>
             <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ fontWeight: 700, fontSize: 22, color: "#1976d2" }}>
-                    Cập nhật sản phẩm
+                    Product Updates
                 </DialogTitle>
                 <DialogContent>
                     <DialogContentText sx={{ mb: 2 }}>
-                        Chỉnh sửa thông tin sản phẩm bên dưới:
+                         To update products to the store, please fill out the information below and submit a request:
                     </DialogContentText>
                     <Box component="form" onSubmit={handleUpdateProduct} sx={{ mt: 0 }}>
                         <Grid container spacing={2}>
                             <Grid item xs={12} sm={6}>
-                                <TextField label="Tên sản phẩm" variant="outlined" size="small"
+                                <TextField label="Product Name" variant="outlined" 
                                     fullWidth required
                                     value={title}
                                     onChange={e => setTitle(e.target.value)}
                                 />
                             </Grid>
                             <Grid item xs={12} sm={6}>
-                                <TextField label="Giá" type="number" variant="outlined" size="small"
-                                    fullWidth required
-                                    value={price}
-                                    onChange={e => setPrice(e.target.value)}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField label="Danh mục" select variant="outlined" size="small"
+                                <TextField label="Category" select variant="outlined" 
                                     fullWidth required
                                     value={categoryId}
                                     onChange={e => setCategoryId(e.target.value)}>
@@ -149,54 +142,60 @@ export default function UpdateProduct({ targetProduct, onUpdated, open, handleCl
                                 </TextField>
                             </Grid>
                             <Grid item xs={12} sm={6}>
-                                <TextField label="Số lượng tồn kho" type="number" variant="outlined" size="small"
+                                <TextField label="Price" type="number" variant="outlined"
+                                    fullWidth required
+                                    value={price}
+                                    onChange={e => setPrice(e.target.value)}
+                                />
+                            </Grid>
+                            
+                            <Grid item xs={12} sm={6}>
+                                <TextField label="Quantity" type="number" variant="outlined"
                                     fullWidth required
                                     value={quantity}
                                     onChange={e => setQuantity(e.target.value)}
                                 />
                             </Grid>
                             <Grid item xs={12}>
-                                <TextField label="Mô tả" variant="outlined" size="small"
+                                <TextField label="Description" variant="outlined" 
                                     fullWidth multiline minRows={2} maxRows={4}
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
                                 />
                             </Grid>
                             <Grid item xs={12} sm={8}>
-                                <TextField label="Image URL" variant="outlined" size="small"
+                                <TextField label="Image URL" variant="outlined" 
                                     fullWidth
                                     value={image}
                                     onChange={e => setImage(e.target.value)}
                                 />
                             </Grid>
                             <Grid item xs={12} sm={4}>
-                                <Button component="label" startIcon={<CloudUploadIcon />} variant="outlined"
-                                    sx={{ width: "100%", height: "40px" }}>
+                                <Button component="label" startIcon={<CloudUploadIcon />} variant="outlined" fullWidth>
                                     Upload
                                     <VisuallyHiddenInput type="file" accept="image/png, image/jpeg" onChange={handleImageChange} />
                                 </Button>
                             </Grid>
                             <Grid item xs={12} sm={6}>
                                 <TextField
-                                    label="Trạng thái bán"
+                                    label="Status"
                                     select
                                     variant="outlined"
-                                    size="small"
                                     fullWidth
                                     value={isAuction}
                                     onChange={e => setIsAuction(e.target.value)}
                                 >
-                                    <MenuItem value="true">Available (Đấu giá)</MenuItem>
-                                    <MenuItem value="false">Not Available (Thường)</MenuItem>
+                                    <MenuItem value="true">Available</MenuItem>
+                                    <MenuItem value="false">Not Available</MenuItem>
                                 </TextField>
                             </Grid>                         
                         </Grid>
                         <DialogActions sx={{ mt: 2, px: 0 }}>
                             <Button onClick={handleClose} variant="text" color="secondary">
-                                Huỷ
+                                Cancel
                             </Button>
                             <Button type="submit" variant="contained" color="primary">
-                                Lưu thay đổi
+                                Save
                             </Button>
                         </DialogActions>
                     </Box>

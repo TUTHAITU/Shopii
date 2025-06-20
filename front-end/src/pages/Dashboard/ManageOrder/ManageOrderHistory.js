@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
   Chip,
   CircularProgress,
@@ -18,19 +12,14 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Divider,
-  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Pagination,
 } from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import CloseIcon from "@mui/icons-material/Close";
-import FirstPageIcon from '@mui/icons-material/FirstPage';
-import LastPageIcon from '@mui/icons-material/LastPage';
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 
@@ -51,6 +40,24 @@ const statusOptions = [
   { value: "rejected", label: "Rejected" },
 ];
 
+// --- Group orderItems by orderId ---
+function groupByOrderId(orderItems) {
+  const orders = {};
+  orderItems.forEach(item => {
+    const oid = item.orderId?._id;
+    if (!oid) return;
+    if (!orders[oid]) {
+      orders[oid] = {
+        ...item.orderId,
+        address: item.orderId?.addressId,
+        products: [],
+      };
+    }
+    orders[oid].products.push(item);
+  });
+  return Object.values(orders);
+}
+
 export default function ManageOrderHistory() {
   const { handleSetDashboardTitle } = useOutletContext();
   const [orderItems, setOrderItems] = useState([]);
@@ -59,12 +66,10 @@ export default function ManageOrderHistory() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [status, setStatus] = useState("");
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Pagination state
+  // Pagination for Orders
   const [page, setPage] = useState(1);
-  const rowsPerPage = 10;
+  const ordersPerPage = 5;
 
   useEffect(() => {
     handleSetDashboardTitle("Order History");
@@ -107,53 +112,37 @@ export default function ManageOrderHistory() {
       filtered = filtered.filter(item => item.status === status);
     }
     setFilteredItems(filtered);
-    setPage(1); // Reset về trang 1 sau khi filter
+    setPage(1);
   };
 
-  const sortedFilteredItems = [...filteredItems].sort(
-    (a, b) => new Date(b.orderId?.orderDate) - new Date(a.orderId?.orderDate)
+  // Grouped Orders
+  const groupedOrders = groupByOrderId(filteredItems);
+  groupedOrders.sort((a, b) =>
+    new Date(b.orderDate) - new Date(a.orderDate)
   );
 
-  // Lấy data phân trang
-  const paginatedItems = sortedFilteredItems.slice(
-    (page - 1) * rowsPerPage,
-    page * rowsPerPage
+  // Pagination trên từng đơn hàng
+  const paginatedOrders = groupedOrders.slice(
+    (page - 1) * ordersPerPage,
+    page * ordersPerPage
   );
-
-  const totalPages = Math.ceil(sortedFilteredItems.length / rowsPerPage);
+  const totalPages = Math.ceil(groupedOrders.length / ordersPerPage);
 
   const handleReset = () => {
     setFromDate("");
     setToDate("");
     setStatus("");
     setFilteredItems(orderItems);
-    setPage(1); // Reset về trang 1
-  };
-
-  const handleOpenDialog = (item) => {
-    setSelectedOrder(item);
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setSelectedOrder(null);
+    setPage(1);
   };
 
   const handleChangePage = (event, value) => {
     setPage(value);
   };
 
-  // First/Last page handlers
-  const handleFirstPage = () => {
-    if (page > 1) setPage(1);
-  };
-  const handleLastPage = () => {
-    if (page < totalPages) setPage(totalPages);
-  };
-
   return (
     <Box>
+      {/* Filter controls */}
       <Stack direction="row" spacing={2} sx={{ my: 2 }}>
         <TextField
           type="date"
@@ -171,7 +160,7 @@ export default function ManageOrderHistory() {
           onChange={e => setToDate(e.target.value)}
           size="small"
         />
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+        {/* <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel id="status-label">Status</InputLabel>
           <Select
             labelId="status-label"
@@ -185,18 +174,11 @@ export default function ManageOrderHistory() {
               </MenuItem>
             ))}
           </Select>
-        </FormControl>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleFilter}
-        >
+        </FormControl> */}
+        <Button variant="contained" color="primary" onClick={handleFilter}>
           Filter
         </Button>
-        <Button
-          variant="outlined"
-          onClick={handleReset}
-        >
+        <Button variant="outlined" onClick={handleReset}>
           Reset
         </Button>
       </Stack>
@@ -208,171 +190,178 @@ export default function ManageOrderHistory() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell><strong>Order Date</strong></TableCell>
-                  <TableCell><strong>Product Name</strong></TableCell>
-                  <TableCell><strong>Image</strong></TableCell>
-                  <TableCell><strong>Buyer</strong></TableCell>
-                  <TableCell><strong>Quantity</strong></TableCell>
-                  <TableCell><strong>Unit Price</strong></TableCell>
-                  <TableCell><strong>Total Price</strong></TableCell>
-                  <TableCell><strong>Status</strong></TableCell>
-                  <TableCell><strong>Action</strong></TableCell>
+                  <TableCell><strong>Order details</strong></TableCell>
+                  <TableCell><strong>Order item </strong></TableCell>
+                  <TableCell><strong>Shipping address</strong></TableCell>
+                  <TableCell><strong>Total</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedItems.map((item) => (
-                  <TableRow key={item._id}>
-                    <TableCell>
-                      {item.orderId?.orderDate
-                        ? new Date(item.orderId.orderDate).toLocaleDateString("en-GB")
-                        : ""}
-                    </TableCell>
-                    <TableCell>
-                      {item.productId?.title}
-                    </TableCell>
-                    <TableCell>
-                      {item.productId?.image ? (
-                        <img
-                          src={item.productId.image}
-                          alt=""
-                          style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 6 }}
-                        />
-                      ) : (
-                        ""
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {item.orderId?.buyerId?.username || ""}
-                    </TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>${item.unitPrice?.toLocaleString() || 0}</TableCell>
-                    <TableCell>
-                      ${item.unitPrice && item.quantity
-                        ? (item.unitPrice * item.quantity).toLocaleString()
-                        : 0}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={item.status}
-                        color={statusColor[item.status] || "default"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleOpenDialog(item)}
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {paginatedItems.length === 0 && (
+                {paginatedOrders.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} align="center">
+                    <TableCell colSpan={4} align="center">
                       No orders found.
                     </TableCell>
                   </TableRow>
                 )}
+                {paginatedOrders.map(order => (
+                  <TableRow key={order._id}>
+                    {/* Chi tiết đơn hàng */}
+                    <TableCell>
+                      <Typography fontWeight="bold" color="primary">
+                        Order id: {order._id}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        Status:{" "}
+                        <Chip
+                          label={order.products[0]?.status}
+                          color={statusColor[order.products[0]?.status] || "default"}
+                          size="small"
+                        />
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        Order date:{" "}
+                        {order.orderDate
+                          ? new Date(order.orderDate).toLocaleString("vi-VN")
+                          : "-"}
+                      </Typography>
+                      {/* Thêm các thông tin khác nếu muốn */}
+                    </TableCell>
+                    {/* Thông tin sản phẩm */}
+                    <TableCell>
+                      {order.products.map((prod, idx) => (
+                        <Box
+                          key={prod._id}
+                          display="flex"
+                          alignItems="center"
+                          mb={1}
+                          py={1}
+                          borderBottom={idx < order.products.length - 1 ? "1px solid #eee" : "none"}
+                        >
+                          <img
+                            src={prod.productId?.image}
+                            alt=""
+                            style={{
+                              width: 50,
+                              height: 50,
+                              borderRadius: 6,
+                              objectFit: "cover",
+                              marginRight: 10,
+                              border: "1px solid #ddd"
+                            }}
+                          />
+                          <Box flex={1}>
+                            <Stack spacing={0.2}>
+                              <Typography variant="body2" fontWeight="bold" noWrap>
+                                {prod.productId?.title}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" noWrap>
+                                Category: {prod.productId?.categoryId?.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" noWrap>
+                                x{prod.quantity} - ₫{prod.unitPrice?.toLocaleString()}
+                              </Typography>
+                            </Stack>
+                          </Box>
+                        </Box>
+                      ))}
+                    </TableCell>
+
+                    {/* Địa chỉ giao hàng */}
+                    <TableCell>
+                      {order.address ? (
+                        <Box>
+                          <Typography variant="body2">
+                            <strong>Full name:</strong> {order.address.fullName}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Phone number:</strong> {order.address.phone}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Address:</strong> {order.address.street}, {order.address.city}, {order.address.state}, {order.address.country}
+                          </Typography>
+                          {/* Hiển thị shipping info của sản phẩm đầu tiên (nếu có) */}
+                          {order.products[0]?.shippingInfo && (
+                            <Box
+                              sx={{
+                                mt: 1,
+                                p: 1,
+                                background: "#f6f8fa",
+                                borderRadius: 1,
+                                border: "1px dashed #ddd"
+                              }}
+                            >
+                              <Typography variant="caption" color="primary">
+                                <b>Shipping Info:</b>
+                              </Typography>
+                              <Typography variant="caption" display="block">
+                                Carrier: {order.products[0].shippingInfo.carrier}
+                              </Typography>
+                              <Typography variant="caption" display="block">
+                                Tracking: {order.products[0].shippingInfo.trackingNumber}
+                              </Typography>
+                              <Typography variant="caption" display="block">
+                                ETA: {order.products[0].shippingInfo.estimatedArrival ? new Date(order.products[0].shippingInfo.estimatedArrival).toLocaleDateString('vi-VN') : "-"}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      ) : (
+                        <Typography variant="body2">-</Typography>
+                      )}
+                    </TableCell>
+                    {/* Giá trị đơn hàng */}
+                    <TableCell>
+                      <Typography fontWeight="bold" color="error">
+                        ₫
+                        {order.products
+                          .reduce(
+                            (sum, prod) =>
+                              sum + (prod.unitPrice || 0) * (prod.quantity || 0),
+                            0
+                          )
+                          .toLocaleString()}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
-          <Box sx={{ mt: 2, display: "flex", justifyContent: "center", alignItems: "center", gap: 1 }}>
-            <IconButton
-              aria-label="first page"
-              disabled={page === 1}
-              onClick={handleFirstPage}
+          <Box
+            sx={{
+              mt: 2,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Box
+              sx={{
+                mt: 2,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 1,
+              }}
             >
-              <FirstPageIcon />
-            </IconButton>
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={handleChangePage}
-              siblingCount={1}
-              boundaryCount={1}
-              showFirstButton={false}
-              showLastButton={false}
-              size="medium"
-            />
-            <IconButton
-              aria-label="last page"
-              disabled={page === totalPages || totalPages === 0}
-              onClick={handleLastPage}
-            >
-              <LastPageIcon />
-            </IconButton>
+
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={handleChangePage}
+                siblingCount={1}
+                boundaryCount={1}
+                size="medium"
+                showFirstButton
+                showLastButton
+              />
+            </Box>
+
           </Box>
         </>
       )}
-
-      {/* DIALOG FOR ORDER DETAIL */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Order Details
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {selectedOrder && (
-            <Box sx={{ flexGrow: 1 }}>
-              <Grid container spacing={3}>
-                {/* LEFT: Order Info */}
-                <Grid item xs={12} sm={6} display="flex" flexDirection="column" gap={1}>
-                  <Typography variant="h6" gutterBottom>
-                    Order Information
-                  </Typography>
-                  <Divider />
-                  <Typography variant="body2"><strong>Order ID:</strong> {selectedOrder.orderId?._id}</Typography>
-                  <Typography variant="body2"><strong>Order Date:</strong> {selectedOrder.orderId?.orderDate ? new Date(selectedOrder.orderId.orderDate).toLocaleString("en-GB") : ""}</Typography>
-                  <Typography variant="body2"><strong>Status:</strong> {selectedOrder.status}</Typography>
-                  <Typography variant="body2"><strong>Buyer:</strong> {selectedOrder.orderId?.buyerId?.username}</Typography>
-                  <Typography variant="body2"><strong>Product:</strong> {selectedOrder.productId?.title}</Typography>
-                  <Typography variant="body2"><strong>Quantity:</strong> {selectedOrder.quantity}</Typography>
-                  <Typography variant="body2"><strong>Unit Price:</strong> ${selectedOrder.unitPrice?.toLocaleString() || 0}</Typography>
-                  <Typography variant="body2"><strong>Total Price:</strong> ${selectedOrder.unitPrice && selectedOrder.quantity ? (selectedOrder.unitPrice * selectedOrder.quantity).toLocaleString() : 0}</Typography>
-                  {selectedOrder.productId?.image && (
-                    <Box sx={{ mt: 1, textAlign: 'center' }}>
-                      <img
-                        src={selectedOrder.productId.image}
-                        alt=""
-                        style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 10, border: '1px solid #eee' }}
-                      />
-                    </Box>
-                  )}
-                </Grid>
-                {/* RIGHT: Shipping Address */}
-                <Grid item xs={12} sm={6} display="flex" flexDirection="column" gap={1}>
-                  <Typography variant="h6" gutterBottom>
-                    Shipping Address
-                  </Typography>
-                  <Divider />
-                  <Typography variant="body2"><strong>Full Name:</strong> {selectedOrder.orderId?.addressId?.fullName || "-"}</Typography>
-                  <Typography variant="body2"><strong>Phone:</strong> {selectedOrder.orderId?.addressId?.phone || "-"}</Typography>
-                  <Typography variant="body2"><strong>Street:</strong> {selectedOrder.orderId?.addressId?.street || "-"}</Typography>
-                  <Typography variant="body2"><strong>City:</strong> {selectedOrder.orderId?.addressId?.city || "-"}</Typography>
-                  <Typography variant="body2"><strong>State:</strong> {selectedOrder.orderId?.addressId?.state || "-"}</Typography>
-                  <Typography variant="body2"><strong>Country:</strong> {selectedOrder.orderId?.addressId?.country || "-"}</Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">Close</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

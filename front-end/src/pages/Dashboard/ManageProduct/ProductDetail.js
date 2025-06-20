@@ -96,16 +96,10 @@ const ProductDetail = () => {
         </Typography>
         <Typography variant="body2" mb={1}>
           <b>Last Updated Stock:</b>{" "}
-          {productDetail.lastUpdated
-            ? new Date(productDetail.lastUpdated).toLocaleString()
+          {productDetail.updatedAt
+            ? new Date(productDetail.updatedAt).toLocaleString()
             : "N/A"}
         </Typography>
-        {/* <Typography variant="body2" color="text.secondary" mb={1}>
-          <b>Auction End:</b>{" "}
-          {productDetail.productId.auctionEndTime
-            ? new Date(productDetail.productId.auctionEndTime).toLocaleString()
-            : ""}
-        </Typography> */}
       </Grid>
     </Grid>
   </Paper>

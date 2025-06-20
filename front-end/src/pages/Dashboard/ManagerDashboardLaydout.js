@@ -30,6 +30,11 @@ import WidgetsIcon from '@mui/icons-material/Widgets';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import ReplayIcon from '@mui/icons-material/Replay';
+import UndoIcon from '@mui/icons-material/Undo';
+import KeyboardReturnIcon from '@mui/icons-material/KeyboardReturn';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import Inventory2Icon from '@mui/icons-material/Inventory2';
 
 import {
   Outlet,
@@ -126,6 +131,12 @@ export default function ManagerDashboardLaydout() {
   const handleOnclickOrder = () => {
     navigate("/manage-order");
   };
+  const handleOnclickDispute = () => {
+    navigate("/manage-dispute");
+  }
+  const handleOnclickReturnRequest = () => {
+    navigate("/manage-return-request");
+  }
 
 
   const handleOnclickSignout = async () => {
@@ -214,11 +225,17 @@ export default function ManagerDashboardLaydout() {
                 </ListItemIcon>
                 <ListItemText primary="Voucher" />
               </ListItemButton>
-              <ListItemButton>
+              <ListItemButton onClick={handleOnclickDispute}>
                 <ListItemIcon>
                   <FeedbackIcon />
                 </ListItemIcon>
-                <ListItemText primary="Complaint" />
+                <ListItemText primary="Dispute" />
+              </ListItemButton>
+               <ListItemButton onClick={handleOnclickReturnRequest}>
+                <ListItemIcon>
+                  <KeyboardReturnIcon />
+                </ListItemIcon>
+                <ListItemText primary="Return Request" />
               </ListItemButton>
 
 
