@@ -23,11 +23,17 @@ export default function StoreProfile() {
         description: "",
         bannerImageURL: ""
     });
+    // Đủ các trường cập nhật seller
     const [formSeller, setFormSeller] = useState({
         username: "",
         fullname: "",
         email: "",
-        avatar: ""
+        avatar: "",
+        phone: "",
+        street: "",
+        city: "",
+        state: "",
+        country: ""
     });
     const [savingStore, setSavingStore] = useState(false);
     const [savingSeller, setSavingSeller] = useState(false);
@@ -79,12 +85,20 @@ export default function StoreProfile() {
     };
 
     // ==== SELLER PROFILE ====
+    const seller = store?.sellerId || {};
+    const address = store?.address || {};
+
     const handleOpenEditSeller = () => {
         setFormSeller({
             username: seller.username || "",
             fullname: seller.fullname || "",
             email: seller.email || "",
             avatar: seller.avatarURL || "",
+            phone: address.phone || "",
+            street: address.street || "",
+            city: address.city || "",
+            state: address.state || "",
+            country: address.country || "",
         });
         setOpenEditSeller(true);
     };
@@ -111,8 +125,6 @@ export default function StoreProfile() {
 
     if (loading) return <CircularProgress sx={{ m: 3 }} />;
     if (!store) return <Typography color="text.secondary">You have no store yet.</Typography>;
-
-    const seller = store.sellerId;
 
     return (
         <Box>
@@ -161,7 +173,7 @@ export default function StoreProfile() {
                     </Stack>
                 </CardContent>
                 <Button variant="outlined" sx={{ ml: 2 }} onClick={handleOpenEditStore}>
-                    Cập nhật hồ sơ
+                    Update store profile
                 </Button>
             </Card>
 
@@ -188,44 +200,40 @@ export default function StoreProfile() {
                             <Typography variant="body2">
                                 <strong>Email:</strong> <EmailIcon fontSize="small" sx={{ mb: '-3px' }} /> {seller.email}
                             </Typography>
-                            {/* <Typography variant="body2">
+                            <Typography variant="body2">
                                 <strong>Password:</strong>{" "}
                                 {seller.password ? "•".repeat(seller.password.length) : "--"}
-                            </Typography> */}
-
+                            </Typography>
+                            <Typography variant="body2">
+                                <strong>Phone:</strong> {address.phone || "--"}
+                            </Typography>
+                            <Typography variant="body2">
+                                <strong>Address:</strong> {address.street
+                                    ? `${address.street}, ${address.city}, ${address.state}, ${address.country}`
+                                    : "--"}
+                            </Typography>
                         </Grid>
-                        {/* <Grid item xs={12} sm={6}>
-                            <Typography variant="body2">
-                                <strong>Role:</strong> {seller.role}
-                            </Typography>
-                            <Typography variant="body2">
-                                <strong>Status:</strong> {seller.action}
-                            </Typography>
-                            <Typography variant="body2">
-                                <strong>Seller ID:</strong> {seller._id}
-                            </Typography>
-                        </Grid> */}
                     </Grid>
                 </CardContent>
                 <Button variant="outlined" sx={{ ml: 2 }} onClick={handleOpenEditSeller}>
-                    Cập nhật profile người bán
+                    Update seller profile
                 </Button>
             </Card>
 
             {/* Dialog cập nhật store */}
             <Dialog open={openEditStore} onClose={handleCloseEditStore} maxWidth="sm" fullWidth>
-                <DialogTitle>Cập nhật hồ sơ cửa hàng</DialogTitle>
+                <DialogTitle>Update store profile</DialogTitle>
                 <DialogContent dividers>
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         <TextField
-                            label="Tên cửa hàng"
+                            label="Store name"
                             name="storeName"
                             value={formStore.storeName}
                             onChange={handleChangeStore}
                             fullWidth
                         />
                         <TextField
-                            label="Mô tả"
+                            label="Description"
                             name="description"
                             value={formStore.description}
                             onChange={handleChangeStore}
@@ -252,25 +260,25 @@ export default function StoreProfile() {
                         disabled={savingStore}
                         variant="contained"
                     >
-                        {savingStore ? "Đang lưu..." : "Lưu thay đổi"}
+                        {savingStore ? "Saving..." : "Save"}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Dialog cập nhật seller */}
             <Dialog open={openEditSeller} onClose={handleCloseEditSeller} maxWidth="sm" fullWidth>
-                <DialogTitle>Cập nhật profile người bán</DialogTitle>
+                <DialogTitle>Update seller profile</DialogTitle>
                 <DialogContent dividers>
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         <TextField
-                            label="User name"
-                            name="userame"
+                            label="Username"
+                            name="username"
                             value={formSeller.username}
                             onChange={handleChangeSeller}
                             fullWidth
                         />
                         <TextField
-                            label="Họ tên"
+                            label="Full name"
                             name="fullname"
                             value={formSeller.fullname}
                             onChange={handleChangeSeller}
@@ -294,6 +302,41 @@ export default function StoreProfile() {
                         {formSeller.avatar &&
                             <img src={formSeller.avatar} alt="Avatar" style={{ width: 80, marginTop: 8, borderRadius: 50, border: '1px solid #ddd' }} />
                         }
+                        <TextField
+                            label="Phone"
+                            name="phone"
+                            value={formSeller.phone}
+                            onChange={handleChangeSeller}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Street"
+                            name="street"
+                            value={formSeller.street}
+                            onChange={handleChangeSeller}
+                            fullWidth
+                        />
+                        <TextField
+                            label="City"
+                            name="city"
+                            value={formSeller.city}
+                            onChange={handleChangeSeller}
+                            fullWidth
+                        />
+                        <TextField
+                            label="State"
+                            name="state"
+                            value={formSeller.state}
+                            onChange={handleChangeSeller}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Country"
+                            name="country"
+                            value={formSeller.country}
+                            onChange={handleChangeSeller}
+                            fullWidth
+                        />
                     </Stack>
                 </DialogContent>
                 <DialogActions>
@@ -303,7 +346,7 @@ export default function StoreProfile() {
                         disabled={savingSeller}
                         variant="contained"
                     >
-                        {savingSeller ? "Đang lưu..." : "Lưu thay đổi"}
+                        {savingSeller ? "Saving..." : " Save changes "}
                     </Button>
                 </DialogActions>
             </Dialog>

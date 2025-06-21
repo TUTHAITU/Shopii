@@ -12,6 +12,7 @@ const Category = require("../models/Category");
 const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken');
 const ReturnRequest = require('../models/ReturnRequest');
+const Address = require('../models/Address');
 // Đăng nhập và chuyển sang chế độ bán hàng
 exports.loginAndSwitch = async (req, res) => {
   try {
@@ -46,20 +47,6 @@ exports.loginAndSwitch = async (req, res) => {
   }
 };
 
-// Lấy thông tin hồ sơ cửa hàng (profile) của seller hiện tại
-// exports.getProfileStoreAndSeller = async (req, res) => {
-//   try {
-//     const sellerId = req.user.id;
-//     const store = await Store.findOne({ sellerId }).populate('sellerId');
-
-//     if (!store) {
-//       return res.status(404).json({ success: false, message: "Store profile not found" });
-//     }
-//     res.json({ success: true, data: store });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
 exports.getProfileStoreAndSeller = async (req, res) => {
   try {
     const sellerId = req.user.id;
@@ -72,20 +59,27 @@ exports.getProfileStoreAndSeller = async (req, res) => {
     const products = await Product.find({ sellerId }, '_id');
     const productIds = products.map(p => p._id);
 
-    // Lấy review của tất cả product
-    const reviews = await Review.find({ productId: { $in: productIds } }, 'rating');
+    // Lấy review gốc (parentId == null) của tất cả product
+    const reviews = await Review.find(
+      { productId: { $in: productIds }, parentId: null },
+      'rating'
+    );
     const totalReviews = reviews.length;
     const avgRating = totalReviews
       ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews).toFixed(1)
       : 0;
 
-    // Trả thêm hai trường này về response
+    // Lấy địa chỉ mặc định của user
+    const address = await Address.findOne({ userId: store.sellerId._id, isDefault: true });
+
+    // Trả về response gồm địa chỉ
     res.json({
       success: true,
       data: {
         ...store.toObject(),
         avgRating: Number(avgRating),
-        totalReviews
+        totalReviews,
+        address // có thể null nếu user chưa khai báo
       }
     });
   } catch (error) {
@@ -111,15 +105,37 @@ exports.updateStoreProfile = async (req, res) => {
   }
 };
 // Update seller's user profile
+// exports.updateSellerProfile = async (req, res) => {
+//   try {
+//     const sellerId = req.user.id;
+//     const { username, fullname, email, avatar } = req.body;
+
+//     // Cập nhật các trường cho user
+//     const updatedUser = await User.findByIdAndUpdate(
+//       sellerId,
+//       { username, fullname, email, avatar },
+//       { new: true }
+//     ).select("-password"); // Không trả về password
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ success: false, message: "Seller not found" });
+//     }
+
+//     res.json({ success: true, data: updatedUser });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 exports.updateSellerProfile = async (req, res) => {
   try {
     const sellerId = req.user.id;
-    const { username, fullname, email, avatar } = req.body;
+    // Lấy các trường user và address từ body
+    const { username, fullname, email, avatar, phone, street, city, state, country } = req.body;
 
-    // Cập nhật các trường cho user
+    // 1. Cập nhật User
     const updatedUser = await User.findByIdAndUpdate(
       sellerId,
-      { username, fullname, email, avatar },
+      { username, fullname, email, avatarURL: avatar }, // Lưu ý: avatar hay avatarURL
       { new: true }
     ).select("-password"); // Không trả về password
 
@@ -127,7 +143,26 @@ exports.updateSellerProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: "Seller not found" });
     }
 
-    res.json({ success: true, data: updatedUser });
+    // 2. Cập nhật địa chỉ mặc định
+    let updatedAddress = null;
+    if (phone || street || city || state || country) {
+      // Upsert địa chỉ mặc định (isDefault: true)
+      updatedAddress = await Address.findOneAndUpdate(
+        { userId: sellerId, isDefault: true },
+        {
+          phone, street, city, state, country, fullName: fullname || updatedUser.fullname, isDefault: true
+        },
+        { new: true, upsert: true }
+      );
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...updatedUser.toObject(),
+        address: updatedAddress
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -240,15 +275,61 @@ exports.getProductById = async (req, res) => {
   }
 };
 // Lấy tất cả review của 1 sản phẩm
+// exports.getReviewsByProductId = async (req, res) => {
+//   try {
+//     const { id } = req.params; // id là productId
+
+//     const reviews = await Review.find({ productId: id })
+//       .populate('reviewerId', 'username')
+//       .sort({ createdAt: -1 }); // mới nhất lên đầu
+
+//     res.json({ success: true, data: reviews });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 exports.getReviewsByProductId = async (req, res) => {
   try {
     const { id } = req.params; // id là productId
 
+    // Lấy tất cả review & populate user
     const reviews = await Review.find({ productId: id })
-      .populate('reviewerId', 'username')
-      .sort({ createdAt: -1 }); // mới nhất lên đầu
+      .populate('reviewerId', 'username role')
+      .sort({ createdAt: -1 });
 
-    res.json({ success: true, data: reviews });
+    // Lấy userIds là seller để tìm cửa hàng
+    const sellerUserIds = reviews
+      .filter(r => r.reviewerId && r.reviewerId.role === "seller")
+      .map(r => r.reviewerId._id);
+
+    // Map: userId -> { storeName, bannerImageURL }
+    let storeMap = {};
+    if (sellerUserIds.length) {
+      const stores = await Store.find(
+        { sellerId: { $in: sellerUserIds } },
+        "sellerId storeName bannerImageURL"
+      );
+      storeMap = stores.reduce((acc, s) => {
+        acc[s.sellerId.toString()] = {
+          storeName: s.storeName,
+          bannerImageURL: s.bannerImageURL,
+        };
+        return acc;
+      }, {});
+    }
+
+    // Gắn thêm storeName và bannerImageURL vào review nếu reviewer là seller
+    const reviewsWithStore = reviews.map(r => {
+      let reviewObj = r.toObject();
+      if (r.reviewerId && r.reviewerId.role === "seller") {
+        const storeInfo = storeMap[r.reviewerId._id.toString()] || {};
+        reviewObj.storeName = storeInfo.storeName || "";
+        reviewObj.storeBanner = storeInfo.bannerImageURL || "";
+      }
+      return reviewObj;
+    });
+
+    res.json({ success: true, data: reviewsWithStore });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -712,4 +793,45 @@ exports.getOrderHistory = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// Thêm vào sellerController.js
+exports.replyToReview = async (req, res) => {
+  try {
+    const { comment } = req.body;
+    const { productId, reviewId } = req.params;
+
+    // Kiểm tra seller sở hữu sản phẩm này không
+    const product = await Product.findById(productId);
+    if (!product || product.sellerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    // Kiểm tra review gốc tồn tại
+    const parentReview = await Review.findById(reviewId);
+    if (!parentReview || parentReview.productId.toString() !== productId) {
+      return res.status(404).json({ success: false, message: "Review not found" });
+    }
+
+    // Chỉ cho phép seller trả lời 1 lần (nếu muốn)
+    const existedReply = await Review.findOne({ parentId: reviewId, reviewerId: req.user.id });
+    if (existedReply) {
+      return res.status(400).json({ success: false, message: "Already replied" });
+    }
+
+    // Tạo reply
+    const reply = new Review({
+      productId,
+      reviewerId: req.user.id,
+      comment,
+      parentId: reviewId
+      // Không cần rating
+    });
+
+    await reply.save();
+
+    res.status(201).json({ success: true, data: reply });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 

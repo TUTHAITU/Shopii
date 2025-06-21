@@ -14,15 +14,15 @@ const statusColor = {
     completed: "info"
 };
 const statusText = {
-    pending: "Chờ duyệt",
-    approved: "Đã duyệt",
-    rejected: "Từ chối",
-    completed: "Hoàn tất"
+    pending: "Pending",
+    approved: "Approved",
+    rejected: "Rejected",
+    completed: "Completed"
 };
 
 export default function ManageReturnRequest() {
     const { handleSetDashboardTitle } = useOutletContext();
-    useEffect(() => { handleSetDashboardTitle("Quản lý yêu cầu trả hàng") }, [handleSetDashboardTitle]);
+    useEffect(() => { handleSetDashboardTitle("Manage return requests") }, [handleSetDashboardTitle]);
 
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -78,12 +78,11 @@ export default function ManageReturnRequest() {
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>Mã yêu cầu</TableCell>
-                                <TableCell>Người gửi</TableCell>
-                                <TableCell>Sản phẩm</TableCell>
-                                <TableCell>Lý do</TableCell>
-                                <TableCell>Trạng thái</TableCell>
-                                <TableCell>Ngày tạo</TableCell>
+                                <TableCell>Code</TableCell>
+                                <TableCell>Sender</TableCell>
+                                <TableCell>Reason</TableCell>
+                                <TableCell>Status</TableCell>
+                                <TableCell>Create At</TableCell>
                                 <TableCell width={120}></TableCell>
                             </TableRow>
                         </TableHead>
@@ -91,7 +90,7 @@ export default function ManageReturnRequest() {
                             {requests.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={7} align="center">
-                                        Không có yêu cầu trả hàng nào.
+                                        No return requests.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -99,9 +98,6 @@ export default function ManageReturnRequest() {
                                 <TableRow key={row._id}>
                                     <TableCell>{row._id}</TableCell>
                                     <TableCell>{row.userId?.fullname || row.userId?.username}</TableCell>
-                                    <TableCell>
-                                        {row.orderItemId?.productId?.title || "(Đã xóa sản phẩm)"}
-                                    </TableCell>
                                     <TableCell>{row.reason}</TableCell>
                                     <TableCell>
                                         <Chip
@@ -114,7 +110,7 @@ export default function ManageReturnRequest() {
                                     </TableCell>
                                     <TableCell>
                                         <Button variant="outlined" size="small" onClick={() => handleOpen(row)}>
-                                            Chi tiết
+                                            Details
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -126,49 +122,75 @@ export default function ManageReturnRequest() {
 
             {/* Details Dialog */}
             <Dialog open={!!selected} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle>Chi tiết yêu cầu trả hàng</DialogTitle>
+                <DialogTitle>Return request details</DialogTitle>
                 <DialogContent dividers>
                     {selected && (
                         <>
                             <Typography gutterBottom>
-                                <b>Mã yêu cầu:</b> {selected._id}
+                                <b>Order Code:</b> {selected._id}
                             </Typography>
                             <Typography gutterBottom>
-                                <b>Người gửi:</b> {selected.userId?.fullname || selected.userId?.username}
+                                <b>Sender:</b> {selected.userId?.fullname || selected.userId?.username}
                             </Typography>
                             <Typography gutterBottom>
-                                <b>Sản phẩm:</b> {selected.orderItemId?.productId?.title}
+                                <b>Reason for return:</b> {selected.reason}
                             </Typography>
                             <Typography gutterBottom>
-                                <b>Lý do trả hàng:</b> {selected.reason}
+                                <b>Product in Order:</b>
                             </Typography>
-                            <Typography gutterBottom>
-                                <b>Trạng thái hiện tại:</b> {statusText[selected.status] || selected.status}
-                            </Typography>
+                            {selected.orderItemId ? (
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Product</TableCell>
+                                            <TableCell>Image</TableCell>
+                                            <TableCell>Quantity</TableCell>
+                                            <TableCell>Unit Price</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        <TableRow>
+                                            <TableCell>{selected.orderItemId.productId?.title || "(deleted)"}</TableCell>
+                                            <TableCell>
+                                                {selected.orderItemId.productId?.image && (
+                                                    <img src={selected.orderItemId.productId.image} alt=""
+                                                        style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 4 }} />
+                                                )}
+                                            </TableCell>
+                                            <TableCell>{selected.orderItemId.quantity}</TableCell>
+                                            <TableCell>
+                                                {selected.orderItemId.unitPrice?.toLocaleString()} đ
+                                            </TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <Typography color="text.secondary">No product found.</Typography>
+                            )}
                             <TextField
                                 select
                                 fullWidth
-                                label="Cập nhật trạng thái"
+                                label="Update status"
                                 value={status}
                                 onChange={e => setStatus(e.target.value)}
                                 margin="normal"
                             >
-                                <MenuItem value="pending">Chờ duyệt</MenuItem>
-                                <MenuItem value="approved">Đã duyệt</MenuItem>
-                                <MenuItem value="rejected">Từ chối</MenuItem>
-                                <MenuItem value="completed">Hoàn tất</MenuItem>
+                                <MenuItem value="pending">Pending</MenuItem>
+                                <MenuItem value="approved">Approved</MenuItem>
+                                <MenuItem value="rejected">Rejected</MenuItem>
+                                <MenuItem value="completed">Completed</MenuItem>
                             </TextField>
                         </>
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleClose}>Đóng</Button>
+                    <Button onClick={handleClose}>Close</Button>
                     <Button
                         onClick={handleUpdate}
                         variant="contained"
                         disabled={saving}
                     >
-                        {saving ? "Đang lưu..." : "Lưu & Cập nhật"}
+                        {saving ? "Đang lưu..." : "Save and Update"}
                     </Button>
                 </DialogActions>
             </Dialog>

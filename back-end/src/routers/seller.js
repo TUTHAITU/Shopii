@@ -15,6 +15,7 @@ router.post("/login", sellerController.loginAndSwitch);
 router.get("/store", sellerController.getProfileStoreAndSeller);
 router.put("/store", sellerController.updateStoreProfile); 
 router.put("/profile", sellerController.updateSellerProfile);
+
 // Quản lý sản phẩm
 router.post("/products", sellerController.createProduct);
 router.get("/products", sellerController.getProducts);
@@ -22,28 +23,33 @@ router.put("/products/:id", sellerController.updateProduct);
 router.delete("/products/:id", sellerController.deleteProduct);
 router.get('/categories', sellerController.getAllCategories);
 router.post('/categories', sellerController.addNewCategory);
+
 // Quản lý tồn kho
 router.put("/inventory/:productId", sellerController.updateInventory);
+
 // Lấy chi tiết 1 sản phẩm
 router.get("/products/:id", sellerController.getProductById);
+
 // Lấy review theo productId
 router.get("/products/:id/reviews", sellerController.getReviewsByProductId);
+router.post("/products/:productId/reviews/:reviewId/reply",sellerController.replyToReview);
+
 // Quản lý đơn hàng
 router.get("/orders/history", sellerController.getOrderHistory);
+
 // Khiếu nại
 router.get("/disputes", sellerController.getDisputes);
 router.put("/disputes/:id/resolve", sellerController.resolveDispute);
-//trả hàng
-router.get("/return-requests", sellerController.getReturnRequests); // Xem yêu cầu trả hàng
-router.put("/return-requests/:id", sellerController.updateReturnRequest); // Xử lý trạng thái yêu cầu
 
+//Trả hàng
+router.get("/return-requests", sellerController.getReturnRequests); 
+router.put("/return-requests/:id", sellerController.updateReturnRequest);
 
-
-router.get("/inventory", sellerController.getInventory);
-router.post("/orders/:orderId/confirm", sellerController.confirmOrder);
 // Đánh giá và phản hồi
 router.get("/reviews", sellerController.getProductReviews);
 router.post("/feedback", sellerController.submitFeedback);
+
+
 // Báo cáo
 router.get("/report", sellerController.getSalesReport);
 

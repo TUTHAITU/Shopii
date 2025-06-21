@@ -75,10 +75,10 @@ export default function ManageComplaint() {
                             <TableRow>
                                 <TableCell>Complaint Code</TableCell>
                                 {/* <TableCell>Order Item Code</TableCell> */}
-                                <TableCell>Complainant</TableCell>
-                                <TableCell>Status</TableCell>
+                                <TableCell>Complainant</TableCell>       
                                 <TableCell>Description</TableCell>
                                 <TableCell>Resolution</TableCell>
+                                <TableCell>Status</TableCell>
                                 <TableCell>Created At</TableCell>
                                 <TableCell width={120}></TableCell>
                             </TableRow>
@@ -97,18 +97,18 @@ export default function ManageComplaint() {
                                     {/* <TableCell>
                                         {row.orderItemId?._id || <span style={{ color: "#888" }}>?</span>}
                                     </TableCell>*/}
-                                    <TableCell>{row.raisedBy?.fullname}</TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={statusText[row.status] || row.status}
-                                            color={statusColor[row.status] || "default"}
-                                        />
-                                    </TableCell>
+                                    <TableCell>{row.raisedBy?.fullname}</TableCell>                                  
                                     <TableCell>{row.description}</TableCell>
                                     <TableCell>
                                         {row.resolution && row.resolution.trim()
                                             ? row.resolution
                                             : <span style={{ color: "#888" }}>No response yet</span>}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={statusText[row.status] || row.status}
+                                            color={statusColor[row.status] || "default"}
+                                        />
                                     </TableCell>
                                     <TableCell>
                                         {row.createdAt ? new Date(row.createdAt).toLocaleString() : ""}
@@ -132,7 +132,7 @@ export default function ManageComplaint() {
                     {selected && (
                         <>
                             <Typography gutterBottom>
-                                <b>Order Item Code:</b> {selected.orderItemId?._id || <span style={{ color: "#888" }}>?</span>}
+                                <b>Order Code:</b> {selected.orderItemId?.orderId._id || <span style={{ color: "#888" }}>?</span>}
                             </Typography>
                             <Typography gutterBottom>
                                 <b>Complainant:</b> {selected.raisedBy?.fullname}
