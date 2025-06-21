@@ -15,7 +15,6 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListSubheader from '@mui/material/ListSubheader';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import AccountBoxIcon from '@mui/icons-material/AccountBox';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import Link from '@mui/material/Link';
@@ -30,11 +29,9 @@ import WidgetsIcon from '@mui/icons-material/Widgets';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import ReplayIcon from '@mui/icons-material/Replay';
-import UndoIcon from '@mui/icons-material/Undo';
 import KeyboardReturnIcon from '@mui/icons-material/KeyboardReturn';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import Inventory2Icon from '@mui/icons-material/Inventory2';
+import Collapse from '@mui/material/Collapse';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 
 import {
   Outlet,
@@ -110,6 +107,11 @@ export default function ManagerDashboardLaydout() {
   const [open, setOpen] = React.useState(true);
   const toggleDrawer = () => {
     setOpen(!open);
+  };
+
+  const [openOrderMgmt, setOpenOrderMgmt] = React.useState(false);
+  const handleToggleOrderMgmt = () => {
+    setOpenOrderMgmt((prev) => !prev);
   };
 
   const handleSetDashboardTitle = (newDashboardTitle) => {
@@ -213,37 +215,47 @@ export default function ManagerDashboardLaydout() {
                 </ListItemIcon>
                 <ListItemText primary="Inventory" />
               </ListItemButton>
-              <ListItemButton onClick={handleOnclickOrder}>
+
+              {/* Order Management gộp 3 mục con */}
+              <ListItemButton onClick={handleToggleOrderMgmt}>
                 <ListItemIcon>
-                  <ReceiptLongIcon />
+                  <ShoppingCartIcon />
                 </ListItemIcon>
-                <ListItemText primary="Order History" />
+                <ListItemText primary="Order Management" />
               </ListItemButton>
+              <Collapse in={openOrderMgmt} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  <ListItemButton sx={{ pl: 4 }} onClick={handleOnclickOrder}>
+                    <ListItemIcon>
+                      <ReceiptLongIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Order History" />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: 4 }} onClick={handleOnclickDispute}>
+                    <ListItemIcon>
+                      <FeedbackIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Dispute" />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: 4 }} onClick={handleOnclickReturnRequest}>
+                    <ListItemIcon>
+                      <KeyboardReturnIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Return Request" />
+                  </ListItemButton>
+                </List>
+              </Collapse>
+
               <ListItemButton>
                 <ListItemIcon>
                   <ConfirmationNumberIcon />
                 </ListItemIcon>
                 <ListItemText primary="Voucher" />
               </ListItemButton>
-              <ListItemButton onClick={handleOnclickDispute}>
-                <ListItemIcon>
-                  <FeedbackIcon />
-                </ListItemIcon>
-                <ListItemText primary="Dispute" />
-              </ListItemButton>
-               <ListItemButton onClick={handleOnclickReturnRequest}>
-                <ListItemIcon>
-                  <KeyboardReturnIcon />
-                </ListItemIcon>
-                <ListItemText primary="Return Request" />
-              </ListItemButton>
-
-
             </React.Fragment>
             <Divider sx={{ my: 1 }} />
             <React.Fragment>
-              <ListSubheader component="div" inset>
-              </ListSubheader>
+              <ListSubheader component="div" inset></ListSubheader>
               <ListItemButton onClick={handleOnclickStoreProfile}>
                 <ListItemIcon>
                   <AccountBoxIcon />
@@ -258,6 +270,7 @@ export default function ManagerDashboardLaydout() {
               </ListItemButton>
             </React.Fragment>
           </List>
+
         </Drawer>
         <Box
           component="main"

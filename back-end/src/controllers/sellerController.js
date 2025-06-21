@@ -718,35 +718,6 @@ exports.resolveDispute = async (req, res) => {
   }
 };
 
-
-// Lịch sử đơn hàng của seller
-// exports.getOrderHistory = async (req, res) => {
-//   try {
-//     // Lấy tất cả sản phẩm của seller này
-//     const products = await Product.find({ sellerId: req.user.id }, "_id");
-//     const productIds = products.map(p => p._id);
-
-//     // Lấy các OrderItem thuộc về seller
-//     const orderItems = await OrderItem.find({ productId: { $in: productIds }, status: { $in: ["shipped", "rejected"] } })
-//       .populate({
-//         path: "orderId",
-//         populate: [
-//           { path: "buyerId", select: "username email fullname" },
-//           { path: "addressId" }
-//         ]
-//       })
-//       .populate({
-//         path: "productId",
-//         select: "title image categoryId",
-//         populate: { path: "categoryId", select: "name" }
-//       });
-
-//     res.json({ success: true, data: orderItems });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
 exports.getOrderHistory = async (req, res) => {
   try {
     // 1. Lấy tất cả sản phẩm của seller này
@@ -756,7 +727,7 @@ exports.getOrderHistory = async (req, res) => {
     // 2. Lấy các OrderItem thuộc về seller
     const orderItems = await OrderItem.find({
         productId: { $in: productIds },
-        status: { $in: ["shipped"] }
+        // status: { $in: ["shipped"] }
       })
       .populate({
         path: "orderId",

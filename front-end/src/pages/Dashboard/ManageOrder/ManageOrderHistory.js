@@ -19,28 +19,20 @@ import {
   TableHead,
   TableRow,
   Pagination,
+  Fab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Badge,
+  IconButton
 } from "@mui/material";
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import PendingActionsIcon from '@mui/icons-material/PendingActions';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import CloseIcon from '@mui/icons-material/Close';
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 
-const statusColor = {
-  pending: "default",
-  shipping: "info",
-  shipped: "success",
-  "failed to ship": "error",
-  rejected: "warning",
-};
-
-const statusOptions = [
-  { value: "", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "shipping", label: "Shipping" },
-  { value: "shipped", label: "Shipped" },
-  { value: "failed to ship", label: "Failed to ship" },
-  { value: "rejected", label: "Rejected" },
-];
-
-// --- Group orderItems by orderId ---
 function groupByOrderId(orderItems) {
   const orders = {};
   orderItems.forEach(item => {
@@ -63,11 +55,19 @@ export default function ManageOrderHistory() {
   const [orderItems, setOrderItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Các filter
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [status, setStatus] = useState("");
+  const [searchField, setSearchField] = useState("orderId");
+  const [searchValue, setSearchValue] = useState("");
 
-  // Pagination for Orders
+  // Dialog thống kê
+  const [openStatsDialog, setOpenStatsDialog] = useState(false);
+  const handleOpenStatsDialog = () => setOpenStatsDialog(true);
+  const handleCloseStatsDialog = () => setOpenStatsDialog(false);
+
+  // Pagination
   const [page, setPage] = useState(1);
   const ordersPerPage = 5;
 
@@ -92,8 +92,23 @@ export default function ManageOrderHistory() {
     setLoading(false);
   };
 
-  const handleFilter = () => {
+  // --- DÙNG CHUNG 1 NÚT SEARCH ---
+  const handleSearchAll = () => {
     let filtered = orderItems;
+    // Filter by orderId/orderItemId
+    if (searchValue.trim()) {
+      if (searchField === "orderId") {
+        filtered = filtered.filter(item =>
+          item.orderId?._id?.toLowerCase().includes(searchValue.trim().toLowerCase())
+        );
+      }
+      if (searchField === "orderItemId") {
+        filtered = filtered.filter(item =>
+          item._id?.toLowerCase().includes(searchValue.trim().toLowerCase())
+        );
+      }
+    }
+    // Filter by date
     if (fromDate) {
       filtered = filtered.filter(
         (item) =>
@@ -108,33 +123,58 @@ export default function ManageOrderHistory() {
           new Date(item.orderId.orderDate) <= new Date(toDate + "T23:59:59")
       );
     }
-    if (status) {
-      filtered = filtered.filter(item => item.status === status);
-    }
     setFilteredItems(filtered);
     setPage(1);
   };
 
-  // Grouped Orders
+  // --- RESET ---
+  const handleReset = () => {
+    setFromDate("");
+    setToDate("");
+    setSearchValue("");
+    setSearchField("orderId");
+    setFilteredItems(orderItems);
+    setPage(1);
+  };
+
+  // Grouped Orders & Statistics
   const groupedOrders = groupByOrderId(filteredItems);
   groupedOrders.sort((a, b) =>
     new Date(b.orderDate) - new Date(a.orderDate)
   );
+  const calcOrderStats = (groupedOrders) => {
+    let shipped = 0, shippedAmount = 0;
+    let pending = 0, shipping = 0, expectedAmount = 0;
+    groupedOrders.forEach(order => {
+      order.products.forEach(prod => {
+        const totalPrice = (prod.unitPrice || 0) * (prod.quantity || 0);
+        if (prod.status === "shipped") {
+          shipped += 1;
+          shippedAmount += totalPrice;
+        }
+        if (prod.status === "pending") {
+          pending += 1;
+          expectedAmount += totalPrice;
+        }
+        if (prod.status === "shipping") {
+          shipping += 1;
+          expectedAmount += totalPrice;
+        }
+      });
+    });
+    return {
+      shipped, shippedAmount,
+      pending, shipping, expected: pending + shipping, expectedAmount
+    };
+  };
+  const { shipped, shippedAmount, pending, shipping, expected, expectedAmount } = calcOrderStats(groupedOrders);
 
-  // Pagination trên từng đơn hàng
+  // Pagination
   const paginatedOrders = groupedOrders.slice(
     (page - 1) * ordersPerPage,
     page * ordersPerPage
   );
   const totalPages = Math.ceil(groupedOrders.length / ordersPerPage);
-
-  const handleReset = () => {
-    setFromDate("");
-    setToDate("");
-    setStatus("");
-    setFilteredItems(orderItems);
-    setPage(1);
-  };
 
   const handleChangePage = (event, value) => {
     setPage(value);
@@ -142,8 +182,8 @@ export default function ManageOrderHistory() {
 
   return (
     <Box>
-      {/* Filter controls */}
-      <Stack direction="row" spacing={2} sx={{ my: 2 }}>
+      {/* --- ALL FILTER --- */}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 2, alignItems: "center" }}>
         <TextField
           type="date"
           label="From date"
@@ -160,28 +200,31 @@ export default function ManageOrderHistory() {
           onChange={e => setToDate(e.target.value)}
           size="small"
         />
-        {/* <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel id="status-label">Status</InputLabel>
+        <FormControl size="small">
+          <InputLabel id="search-field-label">Tìm theo</InputLabel>
           <Select
-            labelId="status-label"
-            label="Status"
-            value={status}
-            onChange={e => setStatus(e.target.value)}
+            labelId="search-field-label"
+            value={searchField}
+            onChange={e => setSearchField(e.target.value)}
+            label="Tìm theo"
+            sx={{ minWidth: 110 }}
           >
-            {statusOptions.map(opt => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
+            <MenuItem value="orderId">Order ID</MenuItem>
+            <MenuItem value="orderItemId">Order Item ID</MenuItem>
           </Select>
-        </FormControl> */}
-        <Button variant="contained" color="primary" onClick={handleFilter}>
-          Filter
-        </Button>
-        <Button variant="outlined" onClick={handleReset}>
-          Reset
-        </Button>
+        </FormControl>
+        <TextField
+          label="Nhập giá trị"
+          size="small"
+          value={searchValue}
+          onChange={e => setSearchValue(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSearchAll(); }}
+          sx={{ minWidth: 180 }}
+        />
+        <Button variant="contained" onClick={handleSearchAll}>Search</Button>
+        <Button variant="outlined" onClick={handleReset}>Reset</Button>
       </Stack>
+
       {loading ? (
         <CircularProgress />
       ) : (
@@ -190,34 +233,25 @@ export default function ManageOrderHistory() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell><strong>Order details</strong></TableCell>
-                  <TableCell><strong>Order item </strong></TableCell>
-                  <TableCell><strong>Shipping address</strong></TableCell>
-                  <TableCell><strong>Total</strong></TableCell>
+                  <TableCell width="40%"><strong>Order Detail</strong></TableCell>
+                  <TableCell width="50%"><strong>Order Item</strong></TableCell>
+                  <TableCell width="10%"><strong>Total</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {paginatedOrders.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} align="center">
+                    <TableCell colSpan={3} align="center">
                       No orders found.
                     </TableCell>
                   </TableRow>
                 )}
                 {paginatedOrders.map(order => (
                   <TableRow key={order._id}>
-                    {/* Chi tiết đơn hàng */}
+                    {/* Chi tiết đơn hàng + Địa chỉ giao hàng */}
                     <TableCell>
                       <Typography fontWeight="bold" color="primary">
                         Order id: {order._id}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        Status:{" "}
-                        <Chip
-                          label={order.products[0]?.status}
-                          color={statusColor[order.products[0]?.status] || "default"}
-                          size="small"
-                        />
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 0.5 }}>
                         Order date:{" "}
@@ -225,7 +259,45 @@ export default function ManageOrderHistory() {
                           ? new Date(order.orderDate).toLocaleString("vi-VN")
                           : "-"}
                       </Typography>
-                      {/* Thêm các thông tin khác nếu muốn */}
+                      {/* Địa chỉ giao hàng */}
+                      {order.address && (
+                        <Box mt={1}>
+                          <Typography variant="body2">
+                            <strong>Full name:</strong> {order.address.fullName}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Phone number:</strong> {order.address.phone}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Address:</strong> {order.address.street}, {order.address.city}, {order.address.state}, {order.address.country}
+                          </Typography>
+                        </Box>
+                      )}
+                      {/* Shipping info của sản phẩm đầu tiên (nếu có) */}
+                      {order.products[0]?.shippingInfo && (
+                        <Box
+                          sx={{
+                            mt: 1,
+                            p: 1,
+                            background: "#f6f8fa",
+                            borderRadius: 1,
+                            border: "1px dashed #ddd"
+                          }}
+                        >
+                          <Typography variant="caption" color="primary">
+                            <b>Shipping Info:</b>
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            Carrier: {order.products[0].shippingInfo.carrier}
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            Tracking: {order.products[0].shippingInfo.trackingNumber}
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            ETA: {order.products[0].shippingInfo.estimatedArrival ? new Date(order.products[0].shippingInfo.estimatedArrival).toLocaleDateString('vi-VN') : "-"}
+                          </Typography>
+                        </Box>
+                      )}
                     </TableCell>
                     {/* Thông tin sản phẩm */}
                     <TableCell>
@@ -242,8 +314,8 @@ export default function ManageOrderHistory() {
                             src={prod.productId?.image}
                             alt=""
                             style={{
-                              width: 50,
-                              height: 50,
+                              width: 80,
+                              height: 80,
                               borderRadius: 6,
                               objectFit: "cover",
                               marginRight: 10,
@@ -251,9 +323,29 @@ export default function ManageOrderHistory() {
                             }}
                           />
                           <Box flex={1}>
-                            <Stack spacing={0.2}>
-                              <Typography variant="body2" fontWeight="bold" noWrap>
+                            <Stack spacing={0.2} direction="row" alignItems="center">
+                              <Typography variant="body2" fontWeight="bold" noWrap sx={{ mr: 1 }}>
                                 {prod.productId?.title}
+                              </Typography>
+                              <Chip
+                                size="small"
+                                label={prod.status}
+                                color={
+                                  prod.status === "pending" ? "default" :
+                                    prod.status === "shipping" ? "info" :
+                                      prod.status === "shipped" ? "success" :
+                                        prod.status === "failed to ship" ? "error" :
+                                          prod.status === "rejected" ? "warning" : "default"
+                                }
+                                sx={{ textTransform: "capitalize", height: 22 }}
+                              />
+                            </Stack>
+                            <Stack spacing={0.2}>
+                              <Typography variant="caption" color="text.secondary" sx={{ wordBreak: "break-all" }}>
+                                <strong>OrderItem ID: {prod._id}</strong>
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ wordBreak: "break-all" }}>
+                                <strong>Product ID: {prod.productId?._id}</strong>
                               </Typography>
                               <Typography variant="caption" color="text.secondary" noWrap>
                                 Category: {prod.productId?.categoryId?.name}
@@ -266,62 +358,19 @@ export default function ManageOrderHistory() {
                         </Box>
                       ))}
                     </TableCell>
-
-                    {/* Địa chỉ giao hàng */}
-                    <TableCell>
-                      {order.address ? (
-                        <Box>
-                          <Typography variant="body2">
-                            <strong>Full name:</strong> {order.address.fullName}
-                          </Typography>
-                          <Typography variant="body2">
-                            <strong>Phone number:</strong> {order.address.phone}
-                          </Typography>
-                          <Typography variant="body2">
-                            <strong>Address:</strong> {order.address.street}, {order.address.city}, {order.address.state}, {order.address.country}
-                          </Typography>
-                          {/* Hiển thị shipping info của sản phẩm đầu tiên (nếu có) */}
-                          {order.products[0]?.shippingInfo && (
-                            <Box
-                              sx={{
-                                mt: 1,
-                                p: 1,
-                                background: "#f6f8fa",
-                                borderRadius: 1,
-                                border: "1px dashed #ddd"
-                              }}
-                            >
-                              <Typography variant="caption" color="primary">
-                                <b>Shipping Info:</b>
-                              </Typography>
-                              <Typography variant="caption" display="block">
-                                Carrier: {order.products[0].shippingInfo.carrier}
-                              </Typography>
-                              <Typography variant="caption" display="block">
-                                Tracking: {order.products[0].shippingInfo.trackingNumber}
-                              </Typography>
-                              <Typography variant="caption" display="block">
-                                ETA: {order.products[0].shippingInfo.estimatedArrival ? new Date(order.products[0].shippingInfo.estimatedArrival).toLocaleDateString('vi-VN') : "-"}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Box>
-                      ) : (
-                        <Typography variant="body2">-</Typography>
-                      )}
-                    </TableCell>
                     {/* Giá trị đơn hàng */}
                     <TableCell>
                       <Typography fontWeight="bold" color="error">
                         ₫
                         {order.products
+                          .filter(prod => ["shipping", "pending", "shipped"].includes(prod.status))
                           .reduce(
-                            (sum, prod) =>
-                              sum + (prod.unitPrice || 0) * (prod.quantity || 0),
+                            (sum, prod) => sum + (prod.unitPrice || 0) * (prod.quantity || 0),
                             0
                           )
                           .toLocaleString()}
                       </Typography>
+
                     </TableCell>
                   </TableRow>
                 ))}
@@ -337,28 +386,83 @@ export default function ManageOrderHistory() {
               gap: 1,
             }}
           >
-            <Box
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={handleChangePage}
+              siblingCount={1}
+              boundaryCount={1}
+              size="medium"
+              showFirstButton
+              showLastButton
+            />
+
+            {/* FAB + Dialog góc dưới phải */}
+            <Fab
+              color="primary"
+              aria-label="order-stats"
+              onClick={handleOpenStatsDialog}
               sx={{
-                mt: 2,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 1,
+                position: 'fixed',
+                bottom: 32,
+                right: 32,
+                zIndex: 1301,
               }}
+              size="medium"
+              title="View Order Stats"
             >
+              <Badge color="secondary">
+                <ShoppingCartIcon />
+              </Badge>
+            </Fab>
 
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={handleChangePage}
-                siblingCount={1}
-                boundaryCount={1}
-                size="medium"
-                showFirstButton
-                showLastButton
-              />
-            </Box>
-
+            <Dialog
+              open={openStatsDialog}
+              onClose={handleCloseStatsDialog}
+              PaperProps={{
+                sx: {
+                  position: 'fixed',
+                  m: 0,
+                  bottom: 88,
+                  right: 32,
+                  width: 320,
+                  borderRadius: 3,
+                  boxShadow: 6,
+                  p: 0,
+                }
+              }}
+              hideBackdrop
+            >
+              <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 1.5, pr: 1 }}>
+                Order Statistics
+                <IconButton onClick={handleCloseStatsDialog} size="small">
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent sx={{ pt: 1, pb: 2 }}>
+                <Box display="flex" alignItems="center" gap={1} mb={1}>
+                  <LocalShippingIcon color="success" />
+                  <Box>
+                    <Typography fontWeight={600}>Total paid (shipped):</Typography>
+                    <Typography color="success.main" fontWeight={600}>
+                      ₫{shippedAmount.toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <PendingActionsIcon color="warning" />
+                  <Box>
+                    <Typography fontWeight={600}>Total to be paid (pending, shipping):</Typography>
+                    <Typography color="warning.main" fontWeight={600}>
+                      ₫{expectedAmount.toLocaleString()}
+                    </Typography>
+                    <Typography variant="caption" ml={1} color="text.secondary">
+                      ({pending} pending, {shipping} shipping)
+                    </Typography>
+                  </Box>
+                </Box>
+              </DialogContent>
+            </Dialog>
           </Box>
         </>
       )}

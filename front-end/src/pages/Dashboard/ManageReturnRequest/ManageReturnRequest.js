@@ -127,7 +127,7 @@ export default function ManageReturnRequest() {
                     {selected && (
                         <>
                             <Typography gutterBottom>
-                                <b>Order Code:</b> {selected._id}
+                                <b>Order Code:</b> {selected.orderItemId?.orderId._id || <span style={{ color: "#888" }}>?</span>}
                             </Typography>
                             <Typography gutterBottom>
                                 <b>Sender:</b> {selected.userId?.fullname || selected.userId?.username}
