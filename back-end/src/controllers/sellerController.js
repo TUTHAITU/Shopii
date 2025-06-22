@@ -104,28 +104,6 @@ exports.updateStoreProfile = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// Update seller's user profile
-// exports.updateSellerProfile = async (req, res) => {
-//   try {
-//     const sellerId = req.user.id;
-//     const { username, fullname, email, avatar } = req.body;
-
-//     // Cập nhật các trường cho user
-//     const updatedUser = await User.findByIdAndUpdate(
-//       sellerId,
-//       { username, fullname, email, avatar },
-//       { new: true }
-//     ).select("-password"); // Không trả về password
-
-//     if (!updatedUser) {
-//       return res.status(404).json({ success: false, message: "Seller not found" });
-//     }
-
-//     res.json({ success: true, data: updatedUser });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
 exports.updateSellerProfile = async (req, res) => {
   try {
     const sellerId = req.user.id;
@@ -274,20 +252,6 @@ exports.getProductById = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// Lấy tất cả review của 1 sản phẩm
-// exports.getReviewsByProductId = async (req, res) => {
-//   try {
-//     const { id } = req.params; // id là productId
-
-//     const reviews = await Review.find({ productId: id })
-//       .populate('reviewerId', 'username')
-//       .sort({ createdAt: -1 }); // mới nhất lên đầu
-
-//     res.json({ success: true, data: reviews });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
 exports.getReviewsByProductId = async (req, res) => {
   try {
     const { id } = req.params; // id là productId
@@ -524,69 +488,147 @@ exports.submitFeedback = async (req, res) => {
   }
 };
 
-// Báo cáo doanh số
+// Báo cáo doanh số nâng cấp cho dashboard
 exports.getSalesReport = async (req, res) => {
   try {
     const { period } = req.query; // week, month, year
     const sellerId = req.user.id;
 
-    // Lấy tất cả sản phẩm của seller
-    const products = await Product.find({ sellerId });
+    // 1. Lấy tất cả sản phẩm của seller
+    const products = await Product.find({ sellerId }).populate("categoryId", "name");
     const productIds = products.map(p => p._id);
 
-    // Lấy tất cả order items liên quan
-    const orderItems = await OrderItem.find({ productId: { $in: productIds } })
-      .populate({
-        path: "orderId",
-        select: "orderDate"
-      });
+    // 2. Lấy tất cả order items liên quan (đã giao - shipped)
+    const orderItems = await OrderItem.find({
+      productId: { $in: productIds },
+      status: "shipped"
+    }).populate({
+      path: "orderId",
+      select: "orderDate buyerId addressId",
+      populate: {
+        path: "addressId",
+        select: "city country",
+      }
+    });
 
-    // Lọc theo khoảng thời gian
+
+    // 3. Lọc theo khoảng thời gian
     const now = new Date();
     let startDate;
-
     switch (period) {
       case "week":
-        startDate = new Date(now.setDate(now.getDate() - 7));
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 7);
         break;
       case "month":
-        startDate = new Date(now.setMonth(now.getMonth() - 1));
+        startDate = new Date(now);
+        startDate.setMonth(startDate.getMonth() - 1);
         break;
       case "year":
-        startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+        startDate = new Date(now);
+        startDate.setFullYear(startDate.getFullYear() - 1);
         break;
       default:
-        startDate = new Date(0); // Tất cả
+        startDate = new Date(0); // all time
     }
 
     const filteredItems = orderItems.filter(item =>
       item.orderId && new Date(item.orderId.orderDate) >= startDate
     );
 
-    // Tính toán báo cáo
-    const report = {
-      totalOrders: filteredItems.length,
-      totalRevenue: filteredItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0),
-      products: {}
-    };
+    // --- Tổng quan ---
+    const totalRevenue = filteredItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    // Lấy tất cả các buyerId duy nhất từ filteredItems
+    const uniqueCustomerSet = new Set(
+      filteredItems.map(i => i.orderId?.buyerId?.toString())
+    );
 
-    // Thống kê theo sản phẩm
-    products.forEach(product => {
-      const productItems = filteredItems.filter(item =>
-        item.productId.toString() === product._id.toString()
-      );
+    // Chuyển thành mảng
+    const uniqueCustomerList = Array.from(uniqueCustomerSet);
 
-      report.products[product.title] = {
-        quantitySold: productItems.reduce((sum, item) => sum + item.quantity, 0),
-        totalRevenue: productItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
-      };
+    // Đếm số lượng
+    const uniqueCustomers = uniqueCustomerList.length;
+
+
+    const productsShipped = [...new Set(filteredItems.map(i => i.productId.toString()))].length;
+
+    // --- Revenue by Category ---
+    const categoryRevenueMap = {};
+    filteredItems.forEach(item => {
+      const product = products.find(p => p._id.equals(item.productId));
+      const catName = product?.categoryId?.name || "Other";
+      categoryRevenueMap[catName] = (categoryRevenueMap[catName] || 0) + (item.unitPrice * item.quantity);
     });
+    // Format for PieChart
+    const revenueByCategory = Object.entries(categoryRevenueMap).map(([name, value]) => ({
+      name,
+      value: Number(((value / totalRevenue) * 100).toFixed(0)) // % phần trăm
+    }));
 
-    res.json({ success: true, data: report });
+    // --- Top Shipping Destinations ---
+    const destinationMap = {};
+    filteredItems.forEach(item => {
+      const city = item.orderId?.addressId?.city || "Unknown";
+      destinationMap[city] = (destinationMap[city] || 0) + (item.unitPrice * item.quantity);
+    });
+    const revenueByDestination = Object.entries(destinationMap)
+      .map(([name, value]) => ({
+        name,
+        value: Number(((value / totalRevenue) * 100).toFixed(0)),
+        raw: value
+      }))
+      .sort((a, b) => b.raw - a.raw)
+      .map(({ raw, ...rest }) => rest);
+
+
+    // --- Revenue Over Time ---
+    const revenueByDate = {};
+    filteredItems.forEach(item => {
+      const dateStr = new Date(item.orderId.orderDate).toISOString().split('T')[0];
+      revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + (item.unitPrice * item.quantity);
+    });
+    const revenueOverTime = Object.entries(revenueByDate).map(([date, revenue]) => ({
+      date,
+      revenue
+    })).sort((a, b) => new Date(a.date) - new Date(b.date));;
+
+    // --- Top Products ---
+    const productSalesMap = {};
+    filteredItems.forEach(item => {
+      const product = products.find(p => p._id.equals(item.productId));
+      const name = product?.title || "Unknown";
+      if (!productSalesMap[name]) productSalesMap[name] = { quantity: 0, revenue: 0 };
+      productSalesMap[name].quantity += item.quantity;
+      productSalesMap[name].revenue += item.unitPrice * item.quantity;
+    });
+    const topProducts = Object.entries(productSalesMap)
+      .map(([product, val]) => ({
+        product,
+        quantity: val.quantity,
+        revenue: val.revenue
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5); // Top 5
+
+    // --- Trả kết quả ---
+    res.json({
+      success: true,
+      data: {
+        totalRevenue,
+        uniqueCustomers,      // số lượng unique
+        uniqueCustomerList,   // mảng các ID customer
+        productsShipped,
+        revenueByCategory,
+        topDestinations: revenueByDestination,
+        revenueOverTime,
+        topProducts
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 // Lấy tất cả yêu cầu trả hàng liên quan tới seller hiện tại
 exports.getReturnRequests = async (req, res) => {
   try {
@@ -726,9 +768,9 @@ exports.getOrderHistory = async (req, res) => {
 
     // 2. Lấy các OrderItem thuộc về seller
     const orderItems = await OrderItem.find({
-        productId: { $in: productIds },
-        // status: { $in: ["shipped"] }
-      })
+      productId: { $in: productIds },
+      // status: { $in: ["shipped"] }
+    })
       .populate({
         path: "orderId",
         populate: [

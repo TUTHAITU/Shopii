@@ -19,16 +19,27 @@ const statusText = {
     resolved: "Resolved",
     closed: "Closed"
 };
+const STATUS_OPTIONS = [
+    { value: "", label: "All Status" },
+    { value: "open", label: "Open" },
+    { value: "under_review", label: "Under Review" },
+    { value: "resolved", label: "Resolved" },
+    { value: "closed", label: "Closed" },
+];
 
 export default function ManageComplaint() {
     const { handleSetDashboardTitle } = useOutletContext();
     handleSetDashboardTitle("Manage Dispute");
+
     const [disputes, setDisputes] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selected, setSelected] = useState(null);
     const [resolveInput, setResolveInput] = useState("");
     const [resolveStatus, setResolveStatus] = useState("resolved");
     const [saving, setSaving] = useState(false);
+
+    // Filter state
+    const [statusFilter, setStatusFilter] = useState("");
 
     // Fetch dispute list
     useEffect(() => {
@@ -64,8 +75,31 @@ export default function ManageComplaint() {
         handleClose();
     };
 
+    // Filtered data
+    const filteredDisputes = disputes.filter(row => !statusFilter || row.status === statusFilter);
+
     return (
         <Paper sx={{ p: 2 }}>
+            {/* Filter UI */}
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ flex: 1 }}>Dispute List</Typography>
+                <TextField
+                    select
+                    size="small"
+                    label="Filter by Status"
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    sx={{ minWidth: 160 }}
+                >
+                    {STATUS_OPTIONS.map(opt => (
+                        <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                    ))}
+                </TextField>
+                {statusFilter &&
+                    <Button variant="text" size="small" onClick={() => setStatusFilter("")}>Reset</Button>
+                }
+            </Stack>
+
             {loading ? (
                 <Stack alignItems="center"><CircularProgress /></Stack>
             ) : (
@@ -74,8 +108,7 @@ export default function ManageComplaint() {
                         <TableHead>
                             <TableRow>
                                 <TableCell>Complaint Code</TableCell>
-                                {/* <TableCell>Order Item Code</TableCell> */}
-                                <TableCell>Complainant</TableCell>       
+                                <TableCell>Complainant</TableCell>
                                 <TableCell>Description</TableCell>
                                 <TableCell>Resolution</TableCell>
                                 <TableCell>Status</TableCell>
@@ -84,20 +117,17 @@ export default function ManageComplaint() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {disputes.length === 0 && (
+                            {filteredDisputes.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={8} align="center">
                                         No complaints found.
                                     </TableCell>
                                 </TableRow>
                             )}
-                            {disputes.map(row => (
+                            {filteredDisputes.map(row => (
                                 <TableRow key={row._id}>
-                                    <TableCell>{row._id}</TableCell> 
-                                    {/* <TableCell>
-                                        {row.orderItemId?._id || <span style={{ color: "#888" }}>?</span>}
-                                    </TableCell>*/}
-                                    <TableCell>{row.raisedBy?.fullname}</TableCell>                                  
+                                    <TableCell>{row._id}</TableCell>
+                                    <TableCell>{row.raisedBy?.fullname}</TableCell>
                                     <TableCell>{row.description}</TableCell>
                                     <TableCell>
                                         {row.resolution && row.resolution.trim()

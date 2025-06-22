@@ -30,7 +30,7 @@ router.put("/inventory/:productId", sellerController.updateInventory);
 // Lấy chi tiết 1 sản phẩm
 router.get("/products/:id", sellerController.getProductById);
 
-// Lấy review theo productId
+// Lấy review theo productId và Review
 router.get("/products/:id/reviews", sellerController.getReviewsByProductId);
 router.post("/products/:productId/reviews/:reviewId/reply",sellerController.replyToReview);
 
@@ -48,7 +48,6 @@ router.put("/return-requests/:id", sellerController.updateReturnRequest);
 // Đánh giá và phản hồi
 router.get("/reviews", sellerController.getProductReviews);
 router.post("/feedback", sellerController.submitFeedback);
-
 
 // Báo cáo
 router.get("/report", sellerController.getSalesReport);

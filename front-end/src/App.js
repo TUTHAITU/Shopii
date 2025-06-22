@@ -22,6 +22,7 @@ import ManageInventory from "./pages/Dashboard/ManageProduct/ManageInventory";
 import ManageOrder from "./pages/Dashboard/ManageOrder/ManageOrderHistory";
 import ManageDispute from "./pages/Dashboard/ManageDispute/ManageDispute";
 import ManageReturnRequest from "./pages/Dashboard/ManageReturnRequest/ManageReturnRequest";
+import Overview from "./pages/Dashboard/Overview/Overview";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { fetchCart } from "./redux/slices/cart.slice";
@@ -75,6 +76,7 @@ const router = createBrowserRouter(
         <Route path="/verify-email" element={<VerifyEmail />}></Route>
       </Route> */}
       <Route path="/" element={<ManagerDashboardLaydout />}>
+        <Route path="/" element={<Overview />}></Route>
         <Route path="/manage-product" element={<ManageProduct />}></Route>
         <Route path="/manage-inventory" element={<ManageInventory />} />
         <Route path="/manage-store" element={<ManageStoreProfile />}></Route>

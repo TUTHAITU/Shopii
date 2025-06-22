@@ -24,7 +24,9 @@ import {
   DialogTitle,
   DialogContent,
   Badge,
-  IconButton
+  IconButton,
+  CardContent,
+  Card
 } from "@mui/material";
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
@@ -415,31 +417,24 @@ export default function ManageOrderHistory() {
                 <ShoppingCartIcon />
               </Badge>
             </Fab>
-
-            <Dialog
-              open={openStatsDialog}
-              onClose={handleCloseStatsDialog}
-              PaperProps={{
-                sx: {
-                  position: 'fixed',
-                  m: 0,
-                  bottom: 88,
-                  right: 32,
-                  width: 320,
-                  borderRadius: 3,
-                  boxShadow: 6,
-                  p: 0,
-                }
+            <Card
+              sx={{
+                position: 'fixed',
+                bottom: 88,
+                right: 32,
+                width: 320,
+                borderRadius: 3,
+                boxShadow: 6,
+                zIndex: 1400,
+                p: 0,
+                display: openStatsDialog ? 'block' : 'none'
               }}
-              hideBackdrop
             >
-              <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 1.5, pr: 1 }}>
-                Order Statistics
-                <IconButton onClick={handleCloseStatsDialog} size="small">
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent sx={{ pt: 1, pb: 2 }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                  <Typography fontWeight={700}>Order Statistics</Typography>
+                  <IconButton size="small" onClick={handleCloseStatsDialog}><CloseIcon fontSize="small" /></IconButton>
+                </Box>
                 <Box display="flex" alignItems="center" gap={1} mb={1}>
                   <LocalShippingIcon color="success" />
                   <Box>
@@ -461,8 +456,8 @@ export default function ManageOrderHistory() {
                     </Typography>
                   </Box>
                 </Box>
-              </DialogContent>
-            </Dialog>
+              </CardContent>
+            </Card>
           </Box>
         </>
       )}

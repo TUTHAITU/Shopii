@@ -19,6 +19,13 @@ const statusText = {
     rejected: "Rejected",
     completed: "Completed"
 };
+const STATUS_OPTIONS = [
+    { value: "", label: "All Status" },
+    { value: "pending", label: "Pending" },
+    { value: "approved", label: "Approved" },
+    { value: "rejected", label: "Rejected" },
+    { value: "completed", label: "Completed" },
+];
 
 export default function ManageReturnRequest() {
     const { handleSetDashboardTitle } = useOutletContext();
@@ -30,6 +37,8 @@ export default function ManageReturnRequest() {
     const [status, setStatus] = useState("pending");
     const [saving, setSaving] = useState(false);
     const [reason, setReason] = useState("");
+    // State cho filter status
+    const [statusFilter, setStatusFilter] = useState("");
 
     // Fetch return request list
     const fetchList = async () => {
@@ -69,8 +78,30 @@ export default function ManageReturnRequest() {
         }
     };
 
+    // Filter dữ liệu hiển thị theo statusFilter
+    const filteredRequests = requests.filter(row => !statusFilter || row.status === statusFilter);
+
     return (
         <Paper sx={{ p: 2 }}>
+            {/* Filter UI */}
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ flex: 1 }}>Return Requests</Typography>
+                <TextField
+                    select
+                    size="small"
+                    label="Filter by Status"
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    sx={{ minWidth: 160 }}
+                >
+                    {STATUS_OPTIONS.map(opt => (
+                        <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                    ))}
+                </TextField>
+                {statusFilter &&
+                    <Button variant="text" size="small" onClick={() => setStatusFilter("")}>Reset</Button>
+                }
+            </Stack>
             {loading ? (
                 <Stack alignItems="center"><CircularProgress /></Stack>
             ) : (
@@ -78,8 +109,8 @@ export default function ManageReturnRequest() {
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>Code</TableCell>
-                                <TableCell>Sender</TableCell>
+                                <TableCell>Return code</TableCell>
+                                <TableCell>Returner</TableCell>
                                 <TableCell>Reason</TableCell>
                                 <TableCell>Status</TableCell>
                                 <TableCell>Create At</TableCell>
@@ -87,14 +118,14 @@ export default function ManageReturnRequest() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {requests.length === 0 && (
+                            {filteredRequests.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={7} align="center">
                                         No return requests.
                                     </TableCell>
                                 </TableRow>
                             )}
-                            {requests.map(row => (
+                            {filteredRequests.map(row => (
                                 <TableRow key={row._id}>
                                     <TableCell>{row._id}</TableCell>
                                     <TableCell>{row.userId?.fullname || row.userId?.username}</TableCell>
@@ -130,7 +161,7 @@ export default function ManageReturnRequest() {
                                 <b>Order Code:</b> {selected.orderItemId?.orderId._id || <span style={{ color: "#888" }}>?</span>}
                             </Typography>
                             <Typography gutterBottom>
-                                <b>Sender:</b> {selected.userId?.fullname || selected.userId?.username}
+                                <b>Returner:</b> {selected.userId?.fullname || selected.userId?.username}
                             </Typography>
                             <Typography gutterBottom>
                                 <b>Reason for return:</b> {selected.reason}

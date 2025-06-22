@@ -37,6 +37,9 @@ import {
   Outlet,
   useNavigate
 } from "react-router-dom";
+import { useState } from 'react';
+import { useEffect } from 'react';
+import axios from 'axios';
 
 function Copyright(props) {
   return (
@@ -108,6 +111,13 @@ export default function ManagerDashboardLaydout() {
   const toggleDrawer = () => {
     setOpen(!open);
   };
+  const [storeInfo, setStoreInfo] = useState(null);
+
+  useEffect(() => {
+    axios.get('http://localhost:9999/api/seller/store?skipAuth=true')
+      .then(res => setStoreInfo(res.data.data))
+      .catch(() => setStoreInfo(null));
+  }, []);
 
   const [openOrderMgmt, setOpenOrderMgmt] = React.useState(false);
   const handleToggleOrderMgmt = () => {
@@ -118,6 +128,9 @@ export default function ManagerDashboardLaydout() {
     setDashboardTitle(newDashboardTitle);
   }
 
+  const handleOnclickOverview = () => {
+    navigate("/");
+  }
   const handleOnclickProducts = () => {
     navigate("/manage-product");
   }
@@ -178,7 +191,17 @@ export default function ManagerDashboardLaydout() {
             >
               {dashboardTitle}
             </Typography>
-            <Chip avatar={<Avatar>M</Avatar>} label="Sang" color="info" />
+            {storeInfo ? (
+              <Chip
+                avatar={<Avatar src={storeInfo.sellerId.avatarURL} alt={storeInfo.sellerId.fullname} />}
+                label={storeInfo.sellerId.fullname}
+                color="info"
+                sx={{ ml: 2, fontWeight: 600, fontSize: 16 }}
+              />
+            ) : (
+              <Chip avatar={<Avatar />} label="Loading..." color="info" sx={{ ml: 2 }} />
+            )}
+
           </Toolbar>
         </AppBar>
         <Drawer variant="permanent" open={open}>
@@ -197,7 +220,7 @@ export default function ManagerDashboardLaydout() {
           <Divider />
           <List component="nav">
             <React.Fragment>
-              <ListItemButton>
+              <ListItemButton onClick={handleOnclickOverview}>
                 <ListItemIcon>
                   <StorefrontIcon />
                 </ListItemIcon>
@@ -285,7 +308,7 @@ export default function ManagerDashboardLaydout() {
           }}
         >
           <Toolbar />
-          <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
             <Outlet context={{ handleSetDashboardTitle }}></Outlet>
             <Copyright sx={{ pt: 4 }} />
           </Container>
