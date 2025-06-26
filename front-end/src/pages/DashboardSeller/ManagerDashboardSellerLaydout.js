@@ -103,7 +103,7 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 // TODO remove, this demo shouldn't need to reset the theme.
 const defaultTheme = createTheme();
 
-export default function ManagerDashboardLaydout() {
+export default function ManagerDashboardSellerLaydout() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [dashboardTitle, setDashboardTitle] = React.useState("Dashboard");

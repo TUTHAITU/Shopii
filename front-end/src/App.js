@@ -14,15 +14,15 @@ import SpecialCase from "./components/SpecialCase/SpecialCase";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ManagerDashboardLaydout from "./pages/Dashboard/ManagerDashboardLaydout";
-import ManageProduct from "./pages/Dashboard/ManageProduct/ManageProduct";
-import ProductDetail from "./pages/Dashboard/ManageProduct/ProductDetail";
-import ManageStoreProfile from "./pages/Dashboard/ManageStoreProfile/ManageStoreProfile";
-import ManageInventory from "./pages/Dashboard/ManageProduct/ManageInventory";
-import ManageOrder from "./pages/Dashboard/ManageOrder/ManageOrderHistory";
-import ManageDispute from "./pages/Dashboard/ManageDispute/ManageDispute";
-import ManageReturnRequest from "./pages/Dashboard/ManageReturnRequest/ManageReturnRequest";
-import Overview from "./pages/Dashboard/Overview/Overview";
+import ManagerDashboardSellerLaydout from "./pages/DashboardSeller/ManagerDashboardSellerLaydout";
+import ManageProduct from "./pages/DashboardSeller/ManageProduct/ManageProduct";
+import ProductDetail from "./pages/DashboardSeller/ManageProduct/ProductDetail";
+import ManageStoreProfile from "./pages/DashboardSeller/ManageStoreProfile/ManageStoreProfile";
+import ManageInventory from "./pages/DashboardSeller/ManageProduct/ManageInventory";
+import ManageOrder from "./pages/DashboardSeller/ManageOrder/ManageOrderHistory";
+import ManageDispute from "./pages/DashboardSeller/ManageDispute/ManageDispute";
+import ManageReturnRequest from "./pages/DashboardSeller/ManageReturnRequest/ManageReturnRequest";
+import Overview from "./pages/DashboardSeller/Overview/Overview";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { fetchCart } from "./redux/slices/cart.slice";
@@ -75,7 +75,7 @@ const router = createBrowserRouter(
         <Route path="/profile" element={<Profile />}></Route>
         <Route path="/verify-email" element={<VerifyEmail />}></Route>
       </Route> */}
-      <Route path="/" element={<ManagerDashboardLaydout />}>
+      <Route path="/" element={<ManagerDashboardSellerLaydout />}>
         <Route path="/" element={<Overview />}></Route>
         <Route path="/manage-product" element={<ManageProduct />}></Route>
         <Route path="/manage-inventory" element={<ManageInventory />} />
@@ -84,12 +84,8 @@ const router = createBrowserRouter(
         <Route path="/manage-order" element={<ManageOrder />}></Route>
         <Route path="/manage-dispute" element={<ManageDispute />} />
         <Route path="/manage-return-request" element={<ManageReturnRequest />} />
-        {/* 
-        <Route path="/create-order" element={<CreateOrder />}></Route>
-        <Route path="/my-profile" element={<MyProfile />}></Route>
-        <Route path="/update-order/:orderId" element={<EditOrder />}></Route> */}
       </Route>
-      {/* <Route path="/" element={<AdminDashboardLaydout />}>
+      {/* <Route path="/" element={<AdminDashboardSellerLaydout />}>
         <Route path="/manage-account" element={<ManageAccount />}></Route>
         <Route path="/manage-profit" element={<ManageProfit />}></Route>
       </Route>

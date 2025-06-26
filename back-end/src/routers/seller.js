@@ -45,11 +45,11 @@ router.put("/disputes/:id/resolve", sellerController.resolveDispute);
 router.get("/return-requests", sellerController.getReturnRequests); 
 router.put("/return-requests/:id", sellerController.updateReturnRequest);
 
+// Báo cáo
+router.get("/report", sellerController.getSalesReport);
+
 // Đánh giá và phản hồi
 router.get("/reviews", sellerController.getProductReviews);
 router.post("/feedback", sellerController.submitFeedback);
-
-// Báo cáo
-router.get("/report", sellerController.getSalesReport);
 
 module.exports = router;
