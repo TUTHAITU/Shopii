@@ -16,4 +16,4 @@ const shippingInfoSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("ShippingInfo", shippingInfoSchema, "shippingInfo");
+module.exports = mongoose.model("ShippingInfo", shippingInfoSchema);

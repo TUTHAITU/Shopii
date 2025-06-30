@@ -80,11 +80,6 @@ router.delete("/categories/:categoryId", deleteCategoryAdmin);
 router.get("/disputes", getAllDisputesAdmin);
 router.put("/disputes/:disputeId", updateDisputeByAdmin);
 
-// --- Coupon Management Routes ---
-router.post("/coupons", createCouponAdmin);
-router.get("/coupons", getAllCouponsAdmin);
-router.put("/coupons/:couponId", updateCouponAdmin);
-router.delete("/coupons/:couponId", deleteCouponAdmin);
 
 // --- Product Management by Admin Routes ---
 router.get("/products", getAllProductsAdmin);

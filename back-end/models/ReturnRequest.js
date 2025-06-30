@@ -16,4 +16,4 @@ const returnRequestSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("ReturnRequest", returnRequestSchema,"returnRequest");
+module.exports = mongoose.model("ReturnRequest", returnRequestSchema);
