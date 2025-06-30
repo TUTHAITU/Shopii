@@ -64,7 +64,6 @@ router.use(authorizeRoles("admin")); // Hoặc router.use(isAdmin);
 router.get("/users", getAllUsers);
 router.get("/users/:userId", getUserDetails);
 router.put("/users/:userId", updateUserByAdmin);
-router.delete("/users/:userId", deleteUserByAdmin);
 
 // --- Store Management Routes ---
 router.get("/stores", getAllStoresAdmin); // Ví dụ: GET /api/admin/stores?status=pending

@@ -1,224 +1,118 @@
-import React from "react";
 import {
-  BrowserRouter as Router,
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
+  createRoutesFromElements,
   Route,
-  Routes,
-  Navigate,
+  ScrollRestoration,
 } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import Footer from "./components/home/Footer/Footer";
+import FooterBottom from "./components/home/Footer/FooterBottom";
+import Header from "./components/home/Header/Header";
+import HeaderBottom from "./components/home/Header/HeaderBottom";
+import SpecialCase from "./components/SpecialCase/SpecialCase";
 
-// Layout Components
-import Navbar from "./components/layout/Navbar";
-import Footer from "./components/layout/Footer";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import ManagerDashboardSellerLaydout from "./pages/DashboardSeller/ManagerDashboardAdminLaydout";
+import ManageProduct from "./pages/DashboardSeller/ManageProduct/ManageProduct";
+import ProductDetail from "./pages/DashboardSeller/ManageProduct/ProductDetail";
+import ManageInventory from "./pages/DashboardSeller/ManageProduct/ManageInventory";
+import ManageOrder from "./pages/DashboardSeller/ManageOrder/ManageOrderHistory";
+import ManageDispute from "./pages/DashboardSeller/ManageDispute/ManageDispute";
+import ManageReturnRequest from "./pages/DashboardSeller/ManageReturnRequest/ManageReturnRequest";
+import Overview from "./pages/DashboardSeller/Overview/Overview";
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { fetchCart } from "./redux/slices/cart.slice";
+import ManageUser from "./pages/DashboardSeller/ManageUser/ManageUser";
 
-// Auth Components
-import Login from "./components/auth/Login";
-import Register from "./components/auth/Register";
-
-// Pages and Components
-import Dashboard from "./pages/Dashboard";
-import AdminUsersList from "./components/users/AdminUsersList";
-import UserForm from "./components/users/UserForm";
-import AdminStoresList from "./components/stores/AdminStoresList";
-import StoreStatusForm from "./components/stores/StoreStatusForm";
-import AdminCategoriesList from "./components/categories/AdminCategoriesList";
-import CategoryForm from "./components/categories/CategoryForm";
-import AdminDisputesList from "./components/disputes/AdminDisputesList";
-import DisputeForm from "./components/disputes/DisputeForm";
-import AdminProductsList from "./components/products/AdminProductsList";
-import ProductDelete from "./components/products/ProductDelete";
-import AdminOrdersList from "./components/orders/AdminOrdersList";
-import OrderDetails from "./components/orders/OrderDetails";
-import OrderStatusForm from "./components/orders/OrderStatusForm";
-import AdminReviewsList from "./components/reviews/AdminReviewsList";
-import ReviewDelete from "./components/reviews/ReviewDelete";
-import AdminFeedbackList from "./components/feedback/AdminFeedbackList";
-
-// Protected Route Component
-const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { isAuthenticated, currentUser, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-
-  if (adminOnly && currentUser?.role !== "admin") {
-    return <Navigate to="/" />;
-  }
-
-  return children;
-};
-
-const App = () => {
+const Layout = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-grow">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Login />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-
-              {/* Admin Routes */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/users"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminUsersList />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/users/edit/:userId"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <UserForm />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/stores"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminStoresList />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/stores/:storeId/status"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <StoreStatusForm />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/categories"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminCategoriesList />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/categories/edit/:categoryId"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <CategoryForm />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/categories/create"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <CategoryForm />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/disputes"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminDisputesList />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/disputes/:disputeId"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <DisputeForm />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/products"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminProductsList />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/products/delete/:productId"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <ProductDelete />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/orders"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminOrdersList /> 
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/orders/:orderId"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <OrderDetails />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/orders/:orderId/status"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <OrderStatusForm />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reviews"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminReviewsList />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reviews/delete/:reviewId"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <ReviewDelete />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/feedback"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminFeedbackList />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
-    </AuthProvider>
+    <div>
+      <ToastContainer
+        position="top-right"
+        autoClose={1000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+      <Header />
+      <HeaderBottom />
+      <SpecialCase />
+      <ScrollRestoration />
+      <Outlet />
+      <Footer />
+      <FooterBottom />
+    </div>
   );
 };
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route>
+      {/* <Route path="/" element={<Layout />}>
+  
+        <Route index element={<Home />}></Route>
+        <Route path="/shop" element={<Shop />}></Route>
+        <Route path="/about" element={<About />}></Route>
+        <Route path="/contact" element={<Contact />}></Route>
+        <Route path="/journal" element={<Journal />}></Route>
+        
+        <Route path="/category/:category" element={<Offer />}></Route>
+        <Route path="/product/:_id" element={<ProductDetails />}></Route>
+        <Route path="/cart" element={<Cart />}></Route>
+        <Route path="/checkout" element={<Checkout />}></Route>
+        <Route path="/paymentgateway" element={<Payment />}></Route>
+        <Route path="/vnpay_return_url" element={<VnpayReturnHandler />}></Route>
+        <Route path="/success" element={<PayOSReturnHandler />}></Route>
+        <Route path="/cancel" element={<CancelReturnHandler />}></Route>
+        <Route path="/order-history" element={<MyOrders />}></Route>
+        <Route path="/profile" element={<Profile />}></Route>
+        <Route path="/verify-email" element={<VerifyEmail />}></Route>
+      </Route> */}
+      <Route path="/" element={<ManagerDashboardSellerLaydout />}>
+        <Route path="/" element={<Overview />}></Route>
+        <Route path="/manage-product" element={<ManageProduct />}></Route>
+        <Route path="/manage-user" element={<ManageUser/>}></Route>
+        <Route path="/manage-inventory" element={<ManageInventory />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/manage-order" element={<ManageOrder />}></Route>
+        <Route path="/manage-dispute" element={<ManageDispute />} />
+        <Route
+          path="/manage-return-request"
+          element={<ManageReturnRequest />}
+        />
+      </Route>
+      {/* <Route path="/" element={<AdminDashboardSellerLaydout />}>
+        <Route path="/manage-account" element={<ManageAccount />}></Route>
+        <Route path="/manage-profit" element={<ManageProfit />}></Route>
+      </Route>
+      <Route path="/signup" element={<SignUp />}></Route>
+      <Route path="/signin" element={<SignIn />}></Route>
+      <Route path="/forgot-password" element={<ForgotPassword />}></Route>
+      <Route path="/reset-password/:token" element={<ResetPassword />}></Route>
+      <Route path="/resend-verification-email" element={<ResendVerificationEmail />}></Route>
+      <Route path="/error" element={<ErrorPage />} /> */}
+    </Route>
+  )
+);
+
+function App() {
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(fetchCart());
+  }, [dispatch]);
+
+  return (
+    <div className="font-bodyFont">
+      <RouterProvider router={router} />
+    </div>
+  );
+}
 
 export default App;

@@ -42,16 +42,35 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 
 const app = express();
-app.use(cors());
+
+// CORS configuration
+const corsOptions = {
+  origin: "http://localhost:3000", // Specify your frontend origin
+  credentials: true, // Allow credentials (e.g., Authorization headers)
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
+  allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
+// Load environment variables
 dotenv.config();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 9999; // Default to 9999 if not set
 const MONGO_URI = process.env.MONGO_URI;
-connect(MONGO_URI);
 
+// MongoDB connection with error handling
+connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// Use API router
 app.use("/api", router);
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`server is running at PORT ${PORT}`);
+  console.log(`Server is running at PORT ${PORT}`);
 });
