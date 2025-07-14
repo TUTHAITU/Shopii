@@ -18,10 +18,10 @@ import axios from "axios";
 // Hàm group các reply vào đúng review gốc dựa vào parentId
 function groupReviews(flatReviews) {
   const reviewsById = {};
-  flatReviews.forEach(r => reviewsById[r._id] = { ...r, replies: [] });
+  flatReviews.forEach((r) => (reviewsById[r._id] = { ...r, replies: [] }));
 
   const roots = [];
-  flatReviews.forEach(r => {
+  flatReviews.forEach((r) => {
     if (r.parentId) {
       // Nếu là reply
       if (reviewsById[r.parentId]) {
@@ -107,8 +107,7 @@ const ProductDetail = () => {
       setErrorReply((prev) => ({
         ...prev,
         [reviewId]:
-          err?.response?.data?.message ||
-          "Failed to reply. Please try again.",
+          err?.response?.data?.message || "Failed to reply. Please try again.",
       }));
     }
     setPostingReply((prev) => ({ ...prev, [reviewId]: false }));
@@ -149,7 +148,8 @@ const ProductDetail = () => {
               {productDetail.productId.title}
             </Typography>
             <Typography color="text.secondary" mb={1}>
-              <b>Category:</b> {productDetail.productId.categoryId?.name || "N/A"}
+              <b>Category:</b>{" "}
+              {productDetail.productId.categoryId?.name || "N/A"}
             </Typography>
             <Typography color="success.main" variant="h5" mb={1}>
               ${productDetail.productId.price}
@@ -159,7 +159,9 @@ const ProductDetail = () => {
             </Typography>
             <Typography variant="body2" mb={1}>
               <b>Status:</b>{" "}
-              {productDetail.productId.isAuction ? "Available" : "Not Available"}
+              {productDetail.productId.isAuction
+                ? "Available"
+                : "Not Available"}
             </Typography>
             <Typography variant="body2" mb={1}>
               <b>In Stock:</b> {productDetail.quantity}
@@ -260,7 +262,9 @@ const ProductDetail = () => {
               <Box mt={1.5}>
                 <TextField
                   value={replyTexts[review._id] || ""}
-                  onChange={(e) => handleReplyChange(review._id, e.target.value)}
+                  onChange={(e) =>
+                    handleReplyChange(review._id, e.target.value)
+                  }
                   placeholder="Reply to this review as Store/admin..."
                   size="small"
                   multiline

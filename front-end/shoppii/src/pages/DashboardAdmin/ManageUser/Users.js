@@ -36,7 +36,7 @@ import axios from "axios";
 import UpdateUser from "./UpdateUser";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
-import SearchIcon from "@mui/icons-material/Search"; // Import SearchIcon
+import SearchIcon from "@mui/icons-material/Search";
 
 export default function Users({ users: initialUsers, onUserUpdated }) {
   const navigate = useNavigate();
@@ -50,27 +50,42 @@ export default function Users({ users: initialUsers, onUserUpdated }) {
   const [keywords, setKeywords] = React.useState("");
   const [selectedRoles, setSelectedRoles] = React.useState([]);
   const [actionFilter, setActionFilter] = React.useState("all");
-  const [currentPage, setCurrentPage] = React.useState(1); // Add currentPage state
+  const [currentPage, setCurrentPage] = React.useState(1);
 
   const handleDeleteUser = async () => {
     if (!deletingUser) return;
+
     try {
-      await axios.delete(`/api/admin/users/${deletingUser._id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}`,
-        },
-      });
-      setSnackbar({
-        open: true,
-        msg: "Xóa người dùng thành công!",
-        severity: "success",
-      });
-      setDeletingUser(null);
-      onUserUpdated(currentPage); // Reload current page
+      const response = await axios.delete(
+        `http://localhost:9999/api/admin/users/${deletingUser._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${
+              localStorage.getItem("accessToken") || ""
+            }`,
+          },
+          params: { skipAuth: true }, // Chỉ dùng nếu backend xử lý skipAuth
+        }
+      );
+
+      if (response.status === 200) {
+        setSnackbar({
+          open: true,
+          msg: "Xóa người dùng thành công!",
+          severity: "success",
+        });
+        setDeletingUser(null);
+        onUserUpdated(currentPage); // Tải lại trang hiện tại
+      } else {
+        throw new Error("Unexpected response status");
+      }
     } catch (error) {
+      console.error("Delete error:", error.response || error);
       setSnackbar({
         open: true,
-        msg: "Lỗi khi xóa người dùng!",
+        msg: `Lỗi khi xóa người dùng! ${
+          error.response?.data?.message || error.message
+        }`,
         severity: "error",
       });
       setDeletingUser(null);

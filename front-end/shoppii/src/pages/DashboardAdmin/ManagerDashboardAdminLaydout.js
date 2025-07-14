@@ -23,15 +23,12 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import AuthenService from "../../services/api/AuthenService";
 import { resetUserInfo } from "../../redux/slices/orebi.slice";
 import { useDispatch } from "react-redux";
-import WarehouseIcon from "@mui/icons-material/Warehouse"; // Tồn kho
-import StorefrontIcon from "@mui/icons-material/Storefront";
-import WidgetsIcon from "@mui/icons-material/Widgets";
-import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
-import FeedbackIcon from "@mui/icons-material/Feedback";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import KeyboardReturnIcon from "@mui/icons-material/KeyboardReturn";
+import PeopleIcon from "@mui/icons-material/People"; // Manage Users
+import WidgetsIcon from "@mui/icons-material/Widgets"; // Manage Products
+import FeedbackIcon from "@mui/icons-material/Feedback"; // Manage Disputes
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"; // Manage Orders
 import Collapse from "@mui/material/Collapse";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import DashboardIcon from "@mui/icons-material/Dashboard"; // Dashboard Overview
 
 import { Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -102,29 +99,45 @@ const Drawer = styled(MuiDrawer, {
   },
 }));
 
-// TODO remove, this demo shouldn't need to reset the theme.
 const defaultTheme = createTheme();
 
-export default function ManagerDashboardAdminLaydout() {
+export default function AdminDashboardLayout() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [dashboardTitle, setDashboardTitle] = React.useState("Dashboard");
+  const [dashboardTitle, setDashboardTitle] = React.useState("Admin Dashboard");
   const [open, setOpen] = React.useState(true);
   const toggleDrawer = () => {
     setOpen(!open);
   };
-  const [storeInfo, setStoreInfo] = useState(null);
+  const [adminInfo, setAdminInfo] = useState(null); // Replace storeInfo with adminInfo
 
   useEffect(() => {
+    // Fetch admin dashboard stats
     axios
-      .get("http://localhost:9999/api/admin/stores?skipAuth=true")
-      .then((res) => setStoreInfo(res.data.data))
-      .catch(() => setStoreInfo(null));
+      .get("http://localhost:9999/api/admin/dashboard/stats?skipAuth=true", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}`,
+        },
+      })
+      .then((res) => {
+        if (res.data.success) {
+          setAdminInfo({
+            totalUsers: res.data.data.totalUsers,
+            totalSellers: res.data.data.totalSellers,
+            totalProducts: res.data.data.totalProducts,
+            totalOrders: res.data.data.totalOrders,
+            summary: `Users: ${res.data.data.totalUsers}, Sellers: ${res.data.data.totalSellers}`,
+          });
+        } else {
+          setAdminInfo(null);
+        }
+      })
+      .catch(() => setAdminInfo(null));
   }, []);
 
-  const [openOrderMgmt, setOpenOrderMgmt] = React.useState(false);
-  const handleToggleOrderMgmt = () => {
-    setOpenOrderMgmt((prev) => !prev);
+  const [openAdminMgmt, setOpenAdminMgmt] = React.useState(false);
+  const handleToggleAdminMgmt = () => {
+    setOpenAdminMgmt((prev) => !prev);
   };
 
   const handleSetDashboardTitle = (newDashboardTitle) => {
@@ -132,27 +145,22 @@ export default function ManagerDashboardAdminLaydout() {
   };
 
   const handleOnclickOverview = () => {
-    navigate("/");
-  };
-  const handleOnclickProducts = () => {
-    navigate("/manage-product");
+    navigate("/admin");
   };
   const handleOnclickUsers = () => {
-    navigate("/manage-user");
+    navigate("/admin/manage-users");
   };
-
-  const handleOnclickInventory = () => {
-    navigate("/manage-inventory");
+  const handleOnclickStores = () => {
+    navigate("/admin/manage-stores");
   };
-
-  const handleOnclickOrder = () => {
-    navigate("/manage-order");
+  const handleOnclickProducts = () => {
+    navigate("/admin/manage-products");
   };
-  const handleOnclickDispute = () => {
-    navigate("/manage-dispute");
+  const handleOnclickDisputes = () => {
+    navigate("/admin/manage-disputes");
   };
-  const handleOnclickReturnRequest = () => {
-    navigate("/manage-return-request");
+  const handleOnclickOrders = () => {
+    navigate("/admin/manage-orders");
   };
 
   const handleOnclickSignout = async () => {
@@ -192,15 +200,15 @@ export default function ManagerDashboardAdminLaydout() {
             >
               {dashboardTitle}
             </Typography>
-            {storeInfo ? (
+            {adminInfo ? (
               <Chip
                 avatar={
                   <Avatar
-                    src={storeInfo.sellerId.avatarURL}
-                    alt={storeInfo.sellerId.fullname}
+                    src={adminInfo.avatarURL || undefined} // Adjust based on your admin data structure
+                    alt={adminInfo.fullname || "Admin"}
                   />
                 }
-                label={storeInfo.sellerId.fullname}
+                label={adminInfo.fullname || "Admin"}
                 color="info"
                 sx={{ ml: 2, fontWeight: 600, fontSize: 16 }}
               />
@@ -232,61 +240,51 @@ export default function ManagerDashboardAdminLaydout() {
             <React.Fragment>
               <ListItemButton onClick={handleOnclickOverview}>
                 <ListItemIcon>
-                  <StorefrontIcon />
+                  <DashboardIcon />
                 </ListItemIcon>
-                <ListItemText primary="Dashboard" />
+                <ListItemText primary="Dashboard Overview" />
               </ListItemButton>
+              <ListItemButton onClick={handleToggleAdminMgmt}>
+                <ListItemIcon>
+                  <PeopleIcon />
+                </ListItemIcon>
+                <ListItemText primary="Admin Management" />
+              </ListItemButton>
+              <Collapse in={openAdminMgmt} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  <ListItemButton sx={{ pl: 4 }} onClick={handleOnclickUsers}>
+                    <ListItemIcon>
+                      <PeopleIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Manage Users" />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: 4 }} onClick={handleOnclickStores}>
+                    <ListItemIcon>
+                      <PeopleIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Manage Shop" />
+                  </ListItemButton>
+                </List>
+              </Collapse>
               <ListItemButton onClick={handleOnclickProducts}>
                 <ListItemIcon>
                   <WidgetsIcon />
                 </ListItemIcon>
-                <ListItemText primary="Products" />
+                <ListItemText primary="Manage Products" />
               </ListItemButton>
-              <ListItemButton onClick={handleOnclickUsers}>
+              <ListItemButton onClick={handleOnclickDisputes}>
                 <ListItemIcon>
-                  <WidgetsIcon />
+                  <FeedbackIcon />
                 </ListItemIcon>
-                <ListItemText primary="Users" />
-              </ListItemButton>
-              <ListItemButton onClick={handleOnclickInventory}>
-                <ListItemIcon>
-                  <WarehouseIcon />
-                </ListItemIcon>
-                <ListItemText primary="Inventory" />
+                <ListItemText primary="Manage Disputes" />
               </ListItemButton>
 
-              {/* Order Management gộp 3 mục con */}
-              <ListItemButton onClick={handleToggleOrderMgmt}>
+              <ListItemButton onClick={handleOnclickOrders}>
                 <ListItemIcon>
-                  <ShoppingCartIcon />
+                  <ReceiptLongIcon />
                 </ListItemIcon>
-                <ListItemText primary="Order Management" />
+                <ListItemText primary="Manage Orders" />
               </ListItemButton>
-              <Collapse in={openOrderMgmt} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  <ListItemButton sx={{ pl: 4 }} onClick={handleOnclickOrder}>
-                    <ListItemIcon>
-                      <ReceiptLongIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Order History" />
-                  </ListItemButton>
-                  <ListItemButton sx={{ pl: 4 }} onClick={handleOnclickDispute}>
-                    <ListItemIcon>
-                      <FeedbackIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Dispute" />
-                  </ListItemButton>
-                  <ListItemButton
-                    sx={{ pl: 4 }}
-                    onClick={handleOnclickReturnRequest}
-                  >
-                    <ListItemIcon>
-                      <KeyboardReturnIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Return Request" />
-                  </ListItemButton>
-                </List>
-              </Collapse>
             </React.Fragment>
             <Divider sx={{ my: 1 }} />
             <React.Fragment>
@@ -314,7 +312,7 @@ export default function ManagerDashboardAdminLaydout() {
         >
           <Toolbar />
           <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            <Outlet context={{ handleSetDashboardTitle }}></Outlet>
+            <Outlet context={{ handleSetDashboardTitle }} />
             <Copyright sx={{ pt: 4 }} />
           </Container>
         </Box>

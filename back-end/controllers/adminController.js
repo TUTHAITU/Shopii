@@ -89,7 +89,28 @@ exports.getUserDetails = async (req, res) => {
     handleError(res, error, "Lỗi khi lấy chi tiết người dùng");
   }
 };
-
+/**
+ * @desc Xóa một người dùng bởi Admin
+ * @route DELETE /api/admin/users/:userId
+ * @access Riêng tư (Admin)
+ */
+exports.deleteUserByAdmin = async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Người dùng không tồn tại" });
+    }
+    await User.findByIdAndDelete(userId);
+    res
+      .status(200)
+      .json({ success: true, message: "Xóa người dùng thành công" });
+  } catch (error) {
+    handleError(res, error, "Lỗi khi xóa người dùng");
+  }
+};
 /**
  * @desc Cập nhật chi tiết người dùng (vai trò, trạng thái khóa/mở khóa) bởi Admin
  * @route PUT /api/admin/users/:userId
@@ -135,25 +156,72 @@ exports.updateUserByAdmin = async (req, res) => {
 // --- Quản Lý Cửa Hàng (Store Management) ---
 
 /**
- * @desc Lấy tất cả cửa hàng (có thể lọc theo trạng thái, ví dụ: đang chờ duyệt)
+ * @desc Lấy tất cả cửa hàng (có thể lọc theo trạng thái, hỗ trợ pagination và tùy chọn tính rating từ Feedback)
  * @route GET /api/admin/stores
+ * @query withRatings=true để bao gồm rating
  * @access Riêng tư (Admin)
  */
 exports.getAllStoresAdmin = async (req, res) => {
-  const { status } = req.query; // Ví dụ: /api/admin/stores?status=pending
+  const { status, page = 1, limit = 10, withRatings = false } = req.query;
   try {
-    const query = {}; // Tạo đối tượng query rỗng
+    const query = {};
     if (status && ["pending", "approved", "rejected"].includes(status)) {
-      query.status = status; // Nếu có status hợp lệ, thêm vào query
+      query.status = status;
     }
-    // Tìm cửa hàng, populate thông tin người bán (chỉ lấy username, fullname, email)
-    const stores = await Store.find(query).populate(
+    let stores = await Store.find(query)
+      .populate("sellerId", "username fullname email")
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+    const total = await Store.countDocuments(query);
+
+    if (withRatings === "true") {
+      // Thêm rating từ Feedback cho từng store
+      stores = await Promise.all(
+        stores.map(async (store) => {
+          const storeObj = store.toObject(); // Chuyển sang object để thêm field
+
+          // Lấy feedback của seller
+          const feedback = await Feedback.findOne({ sellerId: store.sellerId });
+
+          storeObj.averageRating = feedback ? feedback.averageRating : 0;
+          storeObj.totalReviews = feedback ? feedback.totalReviews : 0;
+
+          return storeObj;
+        })
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      count: stores.length,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      data: stores,
+    });
+  } catch (error) {
+    handleError(res, error, "Lỗi khi lấy danh sách cửa hàng");
+  }
+};
+
+/**
+ * @desc Lấy chi tiết một cửa hàng bằng ID
+ * @route GET /api/admin/stores/:storeId
+ * @access Riêng tư (Admin)
+ */
+exports.getStoreDetails = async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.storeId).populate(
       "sellerId",
       "username fullname email"
     );
-    res.status(200).json({ success: true, count: stores.length, data: stores });
+    if (!store) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Cửa hàng không tồn tại" });
+    }
+    res.status(200).json({ success: true, data: store });
   } catch (error) {
-    handleError(res, error, "Lỗi khi lấy danh sách cửa hàng");
+    handleError(res, error, "Lỗi khi lấy chi tiết cửa hàng");
   }
 };
 
@@ -163,10 +231,9 @@ exports.getAllStoresAdmin = async (req, res) => {
  * @access Riêng tư (Admin)
  */
 exports.updateStoreStatusByAdmin = async (req, res) => {
-  const { storeId } = req.params; // Lấy ID cửa hàng
-  const { status } = req.body; // Trạng thái mong muốn: 'approved' hoặc 'rejected'
+  const { storeId } = req.params;
+  const { status } = req.body;
 
-  // Kiểm tra tính hợp lệ của status
   if (!status || !["approved", "rejected"].includes(status)) {
     return res.status(400).json({
       success: false,
@@ -182,17 +249,16 @@ exports.updateStoreStatusByAdmin = async (req, res) => {
         .json({ success: false, message: "Cửa hàng không tồn tại" });
     }
 
-    // Nếu duyệt cửa hàng, đồng thời cập nhật vai trò của người dùng thành 'seller' nếu họ đang là 'buyer'
     if (status === "approved" && store.sellerId) {
       const seller = await User.findById(store.sellerId);
       if (seller && seller.role === "buyer") {
-        seller.role = "seller"; // Thay đổi vai trò
-        await seller.save(); // Lưu lại người dùng
+        seller.role = "seller";
+        await seller.save();
       }
     }
 
-    store.status = status; // Cập nhật trạng thái cửa hàng
-    await store.save(); // Lưu thay đổi
+    store.status = status;
+    await store.save();
     res.status(200).json({
       success: true,
       message: `Cửa hàng đã được ${
@@ -205,6 +271,56 @@ exports.updateStoreStatusByAdmin = async (req, res) => {
   }
 };
 
+/**
+ * @desc Cập nhật toàn bộ thông tin cửa hàng
+ * @route PUT /api/admin/stores/:storeId
+ * @access Riêng tư (Admin)
+ */
+exports.updateStoreByAdmin = async (req, res) => {
+  const { storeId } = req.params;
+  const {
+    storeName,
+    description,
+    bannerImageURL,
+    status,
+    address,
+    contactInfo,
+  } = req.body;
+
+  try {
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Cửa hàng không tồn tại" });
+    }
+
+    if (storeName) store.storeName = storeName;
+    if (description) store.description = description;
+    if (bannerImageURL) store.bannerImageURL = bannerImageURL;
+    if (status && ["pending", "approved", "rejected"].includes(status)) {
+      if (status === "approved" && store.sellerId) {
+        const seller = await User.findById(store.sellerId);
+        if (seller && seller.role === "buyer") {
+          seller.role = "seller";
+          await seller.save();
+        }
+      }
+      store.status = status;
+    }
+    if (address) store.address = address;
+    if (contactInfo) store.contactInfo = contactInfo;
+
+    await store.save();
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật cửa hàng thành công",
+      data: store,
+    });
+  } catch (error) {
+    handleError(res, error, "Lỗi khi cập nhật cửa hàng");
+  }
+};
 // --- Quản Lý Danh Mục (Category Management) ---
 
 /**

@@ -1,11 +1,11 @@
-import * as React from 'react';
-import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
-import Products from './Products';
-import AddProduct from './AddProduct';
+import * as React from "react";
+import Grid from "@mui/material/Grid";
+import Paper from "@mui/material/Paper";
+import Products from "./Products";
+// import AddProduct from './AddProduct';
 // import DeletedProductsLaydout from './DeletedProductsLaydout';
-import { useOutletContext } from 'react-router-dom';
-import axios from 'axios';
+import { useOutletContext } from "react-router-dom";
+import axios from "axios";
 
 export default function ManageProduct() {
   const { handleSetDashboardTitle } = useOutletContext();
@@ -16,7 +16,8 @@ export default function ManageProduct() {
 
   // Fetch products after adding a new one or updating
   const updateProductList = () => {
-    axios.get("http://localhost:9999/api/admin/products?skipAuth=true")
+    axios
+      .get("http://localhost:9999/api/admin/products?skipAuth=true")
       .then((res) => setProducts(res.data.data))
       .catch((error) => console.error("Error fetching product list:", error));
   };
@@ -29,7 +30,7 @@ export default function ManageProduct() {
   return (
     <>
       <Grid item xs={12}>
-        <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
+        <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
           <Products products={products} onProductUpdated={updateProductList} />
         </Paper>
       </Grid>
@@ -37,15 +38,15 @@ export default function ManageProduct() {
         item
         xs={12}
         sx={{
-          position: 'fixed',
+          position: "fixed",
           bottom: 16,
           right: 30,
-          display: 'flex',
-          flexDirection: 'row',
+          display: "flex",
+          flexDirection: "row",
           gap: 1,
         }}
       >
-        <AddProduct onAdded={updateProductList} />
+        {/* <AddProduct onAdded={updateProductList} /> */}
         {/* <DeletedProductsLaydout /> */}
       </Grid>
     </>
@@ -139,11 +140,3 @@ export default function ManageProduct() {
 //     </>
 //   );
 // }
-
-
-
-
-
-
-
-

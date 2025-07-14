@@ -11,21 +11,21 @@ import FooterBottom from "./components/home/Footer/FooterBottom";
 import Header from "./components/home/Header/Header";
 import HeaderBottom from "./components/home/Header/HeaderBottom";
 import SpecialCase from "./components/SpecialCase/SpecialCase";
-
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ManagerDashboardSellerLaydout from "./pages/DashboardSeller/ManagerDashboardAdminLaydout";
-import ManageProduct from "./pages/DashboardSeller/ManageProduct/ManageProduct";
-import ProductDetail from "./pages/DashboardSeller/ManageProduct/ProductDetail";
-import ManageInventory from "./pages/DashboardSeller/ManageProduct/ManageInventory";
-import ManageOrder from "./pages/DashboardSeller/ManageOrder/ManageOrderHistory";
-import ManageDispute from "./pages/DashboardSeller/ManageDispute/ManageDispute";
-import ManageReturnRequest from "./pages/DashboardSeller/ManageReturnRequest/ManageReturnRequest";
-import Overview from "./pages/DashboardSeller/Overview/Overview";
+import ManagerDashboardSellerLaydout from "./pages/DashboardAdmin/ManagerDashboardAdminLaydout";
+import ManageProduct from "./pages/DashboardAdmin/ManageProduct/ManageProduct";
+import ProductDetail from "./pages/DashboardAdmin/ManageProduct/ProductDetail";
+import ManageInventory from "./pages/DashboardAdmin/ManageProduct/ManageInventory";
+import ManageOrder from "./pages/DashboardAdmin/ManageOrder/ManageOrderHistory";
+import ManageDispute from "./pages/DashboardAdmin/ManageDispute/ManageDispute";
+import ManageReturnRequest from "./pages/DashboardAdmin/ManageReturnRequest/ManageReturnRequest";
+import Overview from "./pages/DashboardAdmin/Overview/Overview";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { fetchCart } from "./redux/slices/cart.slice";
-import ManageUser from "./pages/DashboardSeller/ManageUser/ManageUser";
+import ManageUser from "./pages/DashboardAdmin/ManageUser/ManageUser";
+import ManageStore from "./pages/DashboardAdmin/ManageShop/ManageStore";
 
 const Layout = () => {
   return (
@@ -75,16 +75,18 @@ const router = createBrowserRouter(
         <Route path="/profile" element={<Profile />}></Route>
         <Route path="/verify-email" element={<VerifyEmail />}></Route>
       </Route> */}
-      <Route path="/" element={<ManagerDashboardSellerLaydout />}>
-        <Route path="/" element={<Overview />}></Route>
-        <Route path="/manage-product" element={<ManageProduct />}></Route>
-        <Route path="/manage-user" element={<ManageUser/>}></Route>
-        <Route path="/manage-inventory" element={<ManageInventory />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/manage-order" element={<ManageOrder />}></Route>
-        <Route path="/manage-dispute" element={<ManageDispute />} />
+      <Route path="/admin" element={<ManagerDashboardSellerLaydout />}>
+        <Route path="/admin" element={<Overview />}></Route>
+        <Route path="/admin/manage-product" element={<ManageProduct />}></Route>
+        <Route path="/admin/manage-users" element={<ManageUser />}></Route>
+        <Route path="/admin/manage-stores" element={<ManageStore />}></Route>
+
+        <Route path="/admin/manage-inventory" element={<ManageInventory />} />
+        <Route path="/admin/product/:id" element={<ProductDetail />} />
+        <Route path="/admin/manage-order" element={<ManageOrder />}></Route>
+        <Route path="/admin/manage-dispute" element={<ManageDispute />} />
         <Route
-          path="/manage-return-request"
+          path="/admin/manage-return-request"
           element={<ManageReturnRequest />}
         />
       </Route>

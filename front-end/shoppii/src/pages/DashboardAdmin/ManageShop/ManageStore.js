@@ -1,47 +1,48 @@
+// ManageStore.js
 import * as React from "react";
 import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
-import Users from "./Users";
+import Stores from "./Stores";
 import { useOutletContext } from "react-router-dom";
 import axios from "axios";
 
-export default function ManageUser() {
+export default function ManageStore() {
   const { handleSetDashboardTitle } = useOutletContext();
-  const [users, setUsers] = React.useState([]);
+  const [stores, setStores] = React.useState([]);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
 
   // Set the dashboard title
   React.useEffect(() => {
-    handleSetDashboardTitle("Manage Users");
+    handleSetDashboardTitle("Manage Stores");
   }, [handleSetDashboardTitle]);
 
-  // Fetch users with pagination
-  const updateUserList = async (page = 1) => {
+  // Fetch stores with ratings and pagination
+  const updateStoreList = async (page = 1) => {
     try {
       const res = await axios.get(
-        `http://localhost:9999/api/admin/users?page=${page}&limit=10`,
+        `http://localhost:9999/api/admin/stores?page=${page}&limit=10&withRatings=true&skipAuth=true`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
-      setUsers(res.data.data);
+      setStores(res.data.data);
       setTotalPages(res.data.totalPages || 1);
       setCurrentPage(res.data.currentPage || 1);
     } catch (error) {
-      console.error("Error fetching user list:", error);
+      console.error("Error fetching store list:", error);
     }
   };
 
   React.useEffect(() => {
-    updateUserList(1);
+    updateStoreList(1);
   }, []);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      updateUserList(newPage);
+      updateStoreList(newPage);
     }
   };
 
@@ -49,9 +50,9 @@ export default function ManageUser() {
     <>
       <Grid item xs={12}>
         <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
-          <Users
-            users={users}
-            onUserUpdated={updateUserList}
+          <Stores
+            stores={stores}
+            onStoreUpdated={updateStoreList}
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
