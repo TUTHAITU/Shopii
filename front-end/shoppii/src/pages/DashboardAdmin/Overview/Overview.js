@@ -11,6 +11,12 @@ import {
   FormControl,
   InputLabel,
   Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Link as MuiLink,
 } from "@mui/material";
 import {
   PieChart,
@@ -23,6 +29,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import CustomLegend from "./CustomLegend";
 import { useOutletContext } from "react-router-dom";
@@ -260,7 +267,7 @@ const Overview = () => {
           </Grid>
 
           {/* Top Products */}
-          <Grid item xs={12}>
+          <Grid item xs={12} sm={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -297,6 +304,162 @@ const Overview = () => {
                     </Grid>
                   </Grid>
                 ))}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Top Categories by Number of Products */}
+          <Grid item xs={12} sm={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Top Categories by Number of Products
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container>
+                  <Grid item xs={6}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      Category
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      Number of Products
+                    </Typography>
+                  </Grid>
+                </Grid>
+                {report.topCategoriesByProducts?.map((c, index) => (
+                  <Grid container key={index} sx={{ mt: 1 }}>
+                    <Grid item xs={6}>
+                      {c.name}
+                    </Grid>
+                    <Grid item xs={6}>
+                      {c.value}
+                    </Grid>
+                  </Grid>
+                ))}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Recent Activity */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Recent Activity (Last 10)
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>
+                        <b>Type</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Details</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Created At</b>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {report.recentActivity?.map((activity, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{activity.type}</TableCell>
+                        <TableCell>{activity.details}</TableCell>
+                        <TableCell>
+                          {new Date(activity.createdAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Top 5 New Users */}
+          <Grid item xs={12} sm={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Top 5 New Users
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>
+                        <b>Username</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Full Name</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Email</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Created At</b>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {report.top5NewUsers?.map((user, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{user.username}</TableCell>
+                        <TableCell>{user.fullname}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          {new Date(user.createdAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Top 5 New Sellers */}
+          <Grid item xs={12} sm={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Top 5 New Sellers
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>
+                        <b>Username</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Full Name</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Email</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Created At</b>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {report.top5NewSellers?.map((seller, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{seller.username}</TableCell>
+                        <TableCell>{seller.fullname}</TableCell>
+                        <TableCell>{seller.email}</TableCell>
+                        <TableCell>
+                          {new Date(seller.createdAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </Grid>

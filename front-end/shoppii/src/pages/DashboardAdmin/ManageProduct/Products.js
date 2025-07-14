@@ -9,6 +9,7 @@ import Pagination from "@mui/material/Pagination";
 import Stack from "@mui/material/Stack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import CommentIcon from "@mui/icons-material/Comment";
 import Tooltip from "@mui/material/Tooltip";
 import {
   Alert,
@@ -30,19 +31,29 @@ import {
   Typography,
   Grid,
   MenuItem,
+  List,
+  ListItem,
+  ListItemText,
+  Autocomplete,
 } from "@mui/material";
 import axios from "axios";
 import UpdateProduct from "./UpdateProduct";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import SearchIcon from "@mui/icons-material/Search";
-
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
 export default function Products({
   products: initialProducts,
   onProductUpdated,
 }) {
   const [deletingProduct, setDeletingProduct] = React.useState(null);
   const [editingProduct, setEditingProduct] = React.useState(null);
+  const [viewingReviewsProduct, setViewingReviewsProduct] =
+    React.useState(null);
+  const [reviews, setReviews] = React.useState([]);
+  const [averageRating, setAverageRating] = React.useState(0);
+  const [totalReviews, setTotalReviews] = React.useState(0);
   const [snackbar, setSnackbar] = React.useState({
     open: false,
     msg: "",
@@ -55,13 +66,14 @@ export default function Products({
   const [currentPage, setCurrentPage] = React.useState(1);
   const [storeSearch, setStoreSearch] = React.useState("");
   const [productRatings, setProductRatings] = React.useState({});
-
+  const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
+  const checkedIcon = <CheckBoxIcon fontSize="small" />;
   const handleDeleteProduct = async () => {
     if (!deletingProduct) return;
 
     try {
       const response = await axios.delete(
-        `http://localhost:9999/api/admin/products/${deletingProduct._id}`,
+        `http://localhost:9999/api/admin/products/${deletingProduct._id}?skipAuth=true`,
         {
           headers: {
             Authorization: `Bearer ${
@@ -95,6 +107,30 @@ export default function Products({
     }
   };
 
+  const handleViewReviews = async (product) => {
+    try {
+      const res = await axios.get(
+        `http://localhost:9999/api/admin/products/${product._id}/reviews?skipAuth=true`
+      );
+      setReviews(res.data.data);
+      setAverageRating(res.data.averageRating);
+      setTotalReviews(res.data.totalReviews);
+      setViewingReviewsProduct(product);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+      setSnackbar({
+        open: true,
+        msg: "Lỗi khi lấy đánh giá sản phẩm!",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleCloseReviewsDialog = () => {
+    setViewingReviewsProduct(null);
+    setReviews([]);
+  };
+
   // Compute unique statuses from products
   const statuses = React.useMemo(() => {
     const statusSet = new Set();
@@ -110,7 +146,8 @@ export default function Products({
     initialProducts.forEach((product) => {
       if (product.sellerId) {
         const sellerId = product.sellerId._id;
-        const sellerName = product.sellerId.username || "Unknown";
+        const sellerName =
+          product.sellerId.username || product.sellerId.username || "Unknown";
         if (!storeMap.has(sellerId)) {
           storeMap.set(sellerId, sellerName);
         }
@@ -131,9 +168,9 @@ export default function Products({
   // Define rating ranges
   const ratingRanges = [
     { label: ">4", min: 4, max: 5.1 },
-    { label: "3 <= <4", min: 3, max: 4 },
-    { label: "2 <= <3", min: 2, max: 3 },
-    { label: "<2", min: 0, max: 2 },
+    { label: "3 < =<4", min: 3, max: 4 },
+    { label: "2 < =<3", min: 2, max: 3 },
+    { label: "=<2", min: 0, max: 2 },
   ];
 
   // Fetch ratings for products
@@ -302,6 +339,39 @@ export default function Products({
         <Alert severity={snackbar.severity}>{snackbar.msg}</Alert>
       </Snackbar>
 
+      {/* Reviews Dialog */}
+      <Dialog
+        open={Boolean(viewingReviewsProduct)}
+        onClose={handleCloseReviewsDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Reviews for {viewingReviewsProduct?.title}</DialogTitle>
+        <DialogContent>
+          <Typography variant="h6">
+            Average Rating: {averageRating} ({totalReviews} reviews)
+          </Typography>
+          <List>
+            {reviews.map((review) => (
+              <ListItem key={review._id} divider>
+                <ListItemText
+                  primary={`${review.rating} stars - ${
+                    review.reviewerId?.username || "Anonymous"
+                  }`}
+                  secondary={review.comment}
+                />
+              </ListItem>
+            ))}
+            {reviews.length === 0 && <Typography>No reviews yet.</Typography>}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseReviewsDialog} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Grid container spacing={2}>
         <Grid item xs={12} md={3}>
           <Box
@@ -409,41 +479,38 @@ export default function Products({
                 STORE
               </Typography>
               <Box mt={1}>
-                <TextField
-                  value={storeSearch}
-                  onChange={(e) => setStoreSearch(e.target.value)}
-                  size="small"
-                  fullWidth
-                  label="Search stores"
-                  InputProps={{ endAdornment: <SearchIcon /> }}
-                  sx={{ mb: 1 }}
-                />
-                <TextField
-                  select
-                  label="Select stores"
-                  variant="outlined"
-                  fullWidth
-                  value={selectedStores}
-                  onChange={handleStoreChange}
-                  SelectProps={{
-                    multiple: true,
-                    renderValue: (selected) =>
-                      selected
-                        .map(
-                          (id) => stores.find((s) => s.id === id)?.name || ""
-                        )
-                        .join(", "),
+                <Autocomplete
+                  multiple
+                  options={filteredStores}
+                  disableCloseOnSelect
+                  getOptionLabel={(option) => option.name}
+                  value={stores.filter((s) => selectedStores.includes(s.id))}
+                  onChange={(event, newValue) => {
+                    const selectedIds = newValue.map((store) => store.id);
+                    setSelectedStores(selectedIds);
                   }}
-                >
-                  {filteredStores.map((store) => (
-                    <MenuItem key={store.id} value={store.id}>
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderOption={(props, option, { selected }) => (
+                    <li {...props}>
                       <Checkbox
-                        checked={selectedStores.indexOf(store.id) > -1}
+                        icon={icon}
+                        checkedIcon={checkedIcon}
+                        style={{ marginRight: 8 }}
+                        checked={selected}
                       />
-                      {store.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                      {option.name}
+                    </li>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Select stores"
+                      placeholder="Search..."
+                    />
+                  )}
+                />
               </Box>
             </Box>
 
@@ -544,9 +611,18 @@ export default function Products({
                       <Tooltip title="Delete">
                         <IconButton
                           color="error"
+                          style={{ marginRight: 8 }}
                           onClick={() => setDeletingProduct(product)}
                         >
                           <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="View Reviews">
+                        <IconButton
+                          color="info"
+                          onClick={() => handleViewReviews(product)}
+                        >
+                          <CommentIcon />
                         </IconButton>
                       </Tooltip>
                     </TableCell>

@@ -15,7 +15,6 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ManagerDashboardSellerLaydout from "./pages/DashboardAdmin/ManagerDashboardAdminLaydout";
 import ManageProduct from "./pages/DashboardAdmin/ManageProduct/ManageProduct";
-import ManageOrder from "./pages/DashboardAdmin/ManageOrder/ManageOrderHistory";
 import ManageDispute from "./pages/DashboardAdmin/ManageDispute/ManageDispute";
 import ManageReturnRequest from "./pages/DashboardAdmin/ManageReturnRequest/ManageReturnRequest";
 import Overview from "./pages/DashboardAdmin/Overview/Overview";
@@ -82,7 +81,6 @@ const router = createBrowserRouter(
         <Route path="/admin/manage-users" element={<ManageUser />}></Route>
         <Route path="/admin/manage-stores" element={<ManageStore />}></Route>
 
-        <Route path="/admin/manage-order" element={<ManageOrder />}></Route>
         <Route path="/admin/manage-dispute" element={<ManageDispute />} />
         <Route
           path="/admin/manage-return-request"

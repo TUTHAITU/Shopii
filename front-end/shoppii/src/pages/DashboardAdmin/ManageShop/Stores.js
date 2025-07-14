@@ -101,10 +101,10 @@ export default function Stores({ stores: initialStores, onStoreUpdated }) {
 
   // Define rating ranges
   const ratingRanges = [
-    { label: ">4", min: 4, max: 5.1 }, // >4, assuming rating <=5
-    { label: "3 <= <4", min: 3, max: 4 },
-    { label: "2 <= <3", min: 2, max: 3 },
-    { label: "<2", min: 0, max: 2 },
+    { label: ">4", min: 4, max: 5.1 },
+    { label: "3 < =<4", min: 3, max: 4 },
+    { label: "2 < =<3", min: 2, max: 3 },
+    { label: "=<2", min: 0, max: 2 },
   ];
 
   // Filter stores based on search, statuses, and rating ranges

@@ -114,7 +114,7 @@ export default function AdminDashboardLayout() {
   useEffect(() => {
     // Fetch admin dashboard stats
     axios
-      .get("http://localhost:9999/api/admin/dashboard/stats?skipAuth=true", {
+      .get("http://localhost:9999/api/admin/report?skipAuth=true", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}`,
         },
@@ -158,9 +158,6 @@ export default function AdminDashboardLayout() {
   };
   const handleOnclickDisputes = () => {
     navigate("/admin/manage-disputes");
-  };
-  const handleOnclickOrders = () => {
-    navigate("/admin/manage-orders");
   };
 
   const handleOnclickSignout = async () => {
@@ -277,13 +274,6 @@ export default function AdminDashboardLayout() {
                   <FeedbackIcon />
                 </ListItemIcon>
                 <ListItemText primary="Manage Disputes" />
-              </ListItemButton>
-
-              <ListItemButton onClick={handleOnclickOrders}>
-                <ListItemIcon>
-                  <ReceiptLongIcon />
-                </ListItemIcon>
-                <ListItemText primary="Manage Orders" />
               </ListItemButton>
             </React.Fragment>
             <Divider sx={{ my: 1 }} />

@@ -46,7 +46,7 @@ const {
   deleteReviewAdmin,
   getProductStatsAdmin,
   updateProductStatusAdmin,
- 
+
   getProductReviewsAndStats,
 
   // Order Management by Admin
@@ -60,7 +60,7 @@ const {
   getAllSellerFeedbackAdmin,
 
   // Admin Dashboard
-  getAdminDashboardStats,
+  getAdminReport,
 } = require("../controllers/adminController");
 
 // Áp dụng middleware xác thực và phân quyền admin cho tất cả các route trong file này
@@ -105,7 +105,7 @@ router.get("/products/:id/reviews", getProductReviewsAndStats);
 router.get("/reviews", getAllReviewsAdmin); // danh sách đánh giá
 router.delete("/reviews/:id", deleteReviewAdmin); // xoá đánh giá theo ID
 
-// // --- Admin Dashboard Routes ---
-// router.get("/dashboard/stats", getAdminDashboardStats);
+// --- Admin Dashboard Routes ---
+router.get("/report", getAdminReport);
 
 module.exports = router;
