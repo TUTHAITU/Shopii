@@ -6,7 +6,7 @@ const productSchema = new Schema(
     title: { type: String, required: true },
     description: { type: String, required: true },
     price: { type: Number, required: true },
-    image: { type: String },
+    images: { type: [String], default: [] },
     categoryId: {
       type: Schema.Types.ObjectId,
       ref: "Category",
@@ -15,6 +15,8 @@ const productSchema = new Schema(
     sellerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     isAuction: { type: Boolean, default: false },
     auctionEndTime: { type: Date },
+    quantity: { type: Number, required: true },
+    status: { type: String, default: "available" },
   },
   { timestamps: true }
 );

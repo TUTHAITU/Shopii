@@ -105,13 +105,13 @@ export default function Users({ users: initialUsers, onUserUpdated }) {
   const filteredUsers = React.useMemo(() => {
     let filtered = [...initialUsers];
 
-    // 1. Filter by search (fullname or email)
+    // 1. Filter by search (username or email)
     if (keywords.trim() !== "") {
       const keywordLower = keywords.trim().toLowerCase();
       filtered = filtered.filter(
         (user) =>
-          (user.fullname &&
-            user.fullname.toLowerCase().includes(keywordLower)) ||
+          (user.username &&
+            user.username.toLowerCase().includes(keywordLower)) ||
           (user.email && user.email.toLowerCase().includes(keywordLower))
       );
     }
@@ -161,7 +161,7 @@ export default function Users({ users: initialUsers, onUserUpdated }) {
         <DialogContent>
           <DialogContentText>
             Bạn có chắc chắn muốn xoá người dùng{" "}
-            <b>{deletingUser?.fullname || deletingUser?.email}</b> này không?
+            <b>{deletingUser?.username || deletingUser?.email}</b> này không?
             Hành động này không thể hoàn tác.
           </DialogContentText>
         </DialogContent>
@@ -341,7 +341,7 @@ export default function Users({ users: initialUsers, onUserUpdated }) {
               <TableBody>
                 {pageData.map((user) => (
                   <TableRow style={{ cursor: "pointer" }} key={user._id}>
-                    <TableCell>{user.fullname || "N/A"}</TableCell>
+                    <TableCell>{user.username || "N/A"}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.role}</TableCell>
                     <TableCell>{user.action || "N/A"}</TableCell>

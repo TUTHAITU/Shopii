@@ -111,15 +111,15 @@ export default function Stores({ stores: initialStores, onStoreUpdated }) {
   const filteredStores = React.useMemo(() => {
     let filtered = [...initialStores];
 
-    // 1. Filter by search (storeName or seller fullname/email)
+    // 1. Filter by search (storeName or seller username/email)
     if (keywords.trim() !== "") {
       const keywordLower = keywords.trim().toLowerCase();
       filtered = filtered.filter(
         (store) =>
           (store.storeName &&
             store.storeName.toLowerCase().includes(keywordLower)) ||
-          (store.sellerId?.fullname &&
-            store.sellerId.fullname.toLowerCase().includes(keywordLower)) ||
+          (store.sellerId?.username &&
+            store.sellerId.username.toLowerCase().includes(keywordLower)) ||
           (store.sellerId?.email &&
             store.sellerId.email.toLowerCase().includes(keywordLower))
       );
@@ -376,7 +376,7 @@ export default function Stores({ stores: initialStores, onStoreUpdated }) {
                 {pageData.map((store) => (
                   <TableRow style={{ cursor: "pointer" }} key={store._id}>
                     <TableCell>{store.storeName}</TableCell>
-                    <TableCell>{store.sellerId?.fullname || "N/A"}</TableCell>
+                    <TableCell>{store.sellerId?.username || "N/A"}</TableCell>
                     <TableCell>{store.sellerId?.email}</TableCell>
                     <TableCell>{store.status}</TableCell>
                     <TableCell>

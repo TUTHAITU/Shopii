@@ -15,8 +15,6 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ManagerDashboardSellerLaydout from "./pages/DashboardAdmin/ManagerDashboardAdminLaydout";
 import ManageProduct from "./pages/DashboardAdmin/ManageProduct/ManageProduct";
-import ProductDetail from "./pages/DashboardAdmin/ManageProduct/ProductDetail";
-import ManageInventory from "./pages/DashboardAdmin/ManageProduct/ManageInventory";
 import ManageOrder from "./pages/DashboardAdmin/ManageOrder/ManageOrderHistory";
 import ManageDispute from "./pages/DashboardAdmin/ManageDispute/ManageDispute";
 import ManageReturnRequest from "./pages/DashboardAdmin/ManageReturnRequest/ManageReturnRequest";
@@ -77,12 +75,13 @@ const router = createBrowserRouter(
       </Route> */}
       <Route path="/admin" element={<ManagerDashboardSellerLaydout />}>
         <Route path="/admin" element={<Overview />}></Route>
-        <Route path="/admin/manage-product" element={<ManageProduct />}></Route>
+        <Route
+          path="/admin/manage-products"
+          element={<ManageProduct />}
+        ></Route>
         <Route path="/admin/manage-users" element={<ManageUser />}></Route>
         <Route path="/admin/manage-stores" element={<ManageStore />}></Route>
 
-        <Route path="/admin/manage-inventory" element={<ManageInventory />} />
-        <Route path="/admin/product/:id" element={<ProductDetail />} />
         <Route path="/admin/manage-order" element={<ManageOrder />}></Route>
         <Route path="/admin/manage-dispute" element={<ManageDispute />} />
         <Route

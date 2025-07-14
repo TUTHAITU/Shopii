@@ -17,7 +17,7 @@ export default function UpdateUser({
   open,
   handleClose,
 }) {
-  const [fullname, setFullname] = React.useState(targetUser?.fullname || "");
+  const [username, setUsername] = React.useState(targetUser?.username || "");
   const [email, setEmail] = React.useState(targetUser?.email || "");
   const [role, setRole] = React.useState(targetUser?.role || "");
   const [action, setAction] = React.useState(targetUser?.action || "");
@@ -28,7 +28,7 @@ export default function UpdateUser({
   });
 
   React.useEffect(() => {
-    setFullname(targetUser?.fullname || "");
+    setUsername(targetUser?.username || "");
     setEmail(targetUser?.email || "");
     setRole(targetUser?.role || "");
     setAction(targetUser?.action || "");
@@ -37,7 +37,7 @@ export default function UpdateUser({
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     try {
-      const reqBody = { fullname, email, role, action };
+      const reqBody = { username, email, role, action };
       const { data } = await axios.put(
         `http://localhost:9999/api/admin/users/${targetUser._id}?skipAuth=true`,
         reqBody,
@@ -76,12 +76,12 @@ export default function UpdateUser({
           </DialogContentText>
           <form onSubmit={handleUpdateUser} sx={{ mt: 0 }}>
             <TextField
-              label="Full Name"
+              label="User Name"
               variant="outlined"
               fullWidth
               required
-              value={fullname}
-              onChange={(e) => setFullname(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               sx={{ mb: 2 }}
             />
             <TextField
