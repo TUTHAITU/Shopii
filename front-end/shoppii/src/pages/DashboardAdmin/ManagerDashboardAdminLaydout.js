@@ -156,9 +156,6 @@ export default function AdminDashboardLayout() {
   const handleOnclickProducts = () => {
     navigate("/admin/manage-products");
   };
-  const handleOnclickDisputes = () => {
-    navigate("/admin/manage-disputes");
-  };
 
   const handleOnclickSignout = async () => {
     await AuthenService.logout();
@@ -268,12 +265,6 @@ export default function AdminDashboardLayout() {
                   <WidgetsIcon />
                 </ListItemIcon>
                 <ListItemText primary="Manage Products" />
-              </ListItemButton>
-              <ListItemButton onClick={handleOnclickDisputes}>
-                <ListItemIcon>
-                  <FeedbackIcon />
-                </ListItemIcon>
-                <ListItemText primary="Manage Disputes" />
               </ListItemButton>
             </React.Fragment>
             <Divider sx={{ my: 1 }} />

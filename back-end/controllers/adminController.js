@@ -9,6 +9,13 @@ const {
   Coupon,
   Feedback,
   Review,
+  Address,
+  Bid,
+  Inventory,
+  Message,
+  Payment,
+  ReturnRequest,
+  ShippingInfo,
 } = require("../models");
 const logger = require("../utils/logger");
 const mongoose = require("mongoose");
@@ -131,11 +138,19 @@ exports.updateUserByAdmin = async (req, res) => {
 
     if (username) user.username = username;
     if (email) user.email = email;
-    if (role && ["buyer", "seller", "admin"].includes(role)) {
+    if (role && ["user", "seller", "admin"].includes(role)) {
       user.role = role;
     }
     if (action && ["lock", "unlock"].includes(action)) {
       user.action = action;
+      // Nếu lock seller, reject store nếu tồn tại
+      if (action === "lock" && user.role === "seller") {
+        const store = await Store.findOne({ sellerId: user._id });
+        if (store) {
+          store.status = "rejected";
+          await store.save();
+        }
+      }
     }
 
     await user.save();
@@ -252,7 +267,7 @@ exports.updateStoreStatusByAdmin = async (req, res) => {
 
     if (status === "approved" && store.sellerId) {
       const seller = await User.findById(store.sellerId);
-      if (seller && seller.role === "buyer") {
+      if (seller && seller.role === "user") {
         seller.role = "seller";
         await seller.save();
       }
@@ -302,7 +317,7 @@ exports.updateStoreByAdmin = async (req, res) => {
     if (status && ["pending", "approved", "rejected"].includes(status)) {
       if (status === "approved" && store.sellerId) {
         const seller = await User.findById(store.sellerId);
-        if (seller && seller.role === "buyer") {
+        if (seller && seller.role === "user") {
           seller.role = "seller";
           await seller.save();
         }
@@ -1014,88 +1029,37 @@ exports.getProductReviewsAndStats = async (req, res) => {
 //     handleError(res, error, "Lỗi khi lấy danh sách phản hồi của người bán");
 //   }
 // };
-
-// --- Quản Lý Dashboard (Dashboard Management) ---
-
-/**
- * @desc Lấy báo cáo tổng quan cho dashboard admin (hỗ trợ lọc theo period: week, month, year, hoặc all time)
- * @route GET /api/admin/report
- * @query period=week/month/year (optional, default all time)
- * @access Riêng tư (Admin)
- */
 exports.getAdminReport = async (req, res) => {
   const { period } = req.query;
   try {
+    // Date filter setup
     let dateFilter = {};
     const now = new Date();
+    let startDate = null;
+
     if (period === "week") {
-      const oneWeekAgo = new Date(now);
-      oneWeekAgo.setDate(now.getDate() - 7);
-      dateFilter = { createdAt: { $gte: oneWeekAgo } }; // Sử dụng createdAt cho các model
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
     } else if (period === "month") {
-      const oneMonthAgo = new Date(now);
-      oneMonthAgo.setMonth(now.getMonth() - 1);
-      dateFilter = { createdAt: { $gte: oneMonthAgo } };
+      startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 1);
     } else if (period === "year") {
-      const oneYearAgo = new Date(now);
-      oneYearAgo.setFullYear(now.getFullYear() - 1);
-      dateFilter = { createdAt: { $gte: oneYearAgo } };
+      startDate = new Date();
+      startDate.setFullYear(startDate.getFullYear() - 1);
     }
 
-    // Tính tổng doanh thu từ orders shipped
-    const totalRevenueStats = await Order.aggregate([
-      { $match: { ...dateFilter, status: "completed" } },
-      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } },
-    ]);
-    const totalRevenue =
-      totalRevenueStats.length > 0 ? totalRevenueStats[0].totalRevenue : 0;
+    if (startDate) {
+      dateFilter = { createdAt: { $gte: startDate } };
+    }
 
-    // Tính số unique customers (buyerId unique từ orders)
-    const uniqueCustomersStats = await Order.aggregate([
+    // Get active seller/buyer IDs from orders
+    const activeBuyerIds = await Order.distinct("buyerId", dateFilter);
+    const activeSellerIdsAgg = await OrderItem.aggregate([
       { $match: dateFilter },
-      { $group: { _id: "$buyerId" } },
-      { $count: "uniqueCustomers" },
-    ]);
-    const uniqueCustomers =
-      uniqueCustomersStats.length > 0
-        ? uniqueCustomersStats[0].uniqueCustomers
-        : 0;
-
-    // Tính số products shipped (tổng quantity từ orderItems của orders shipped)
-    const productsShippedStats = await Order.aggregate([
-      { $match: { ...dateFilter, status: "completed" } },
-      {
-        $lookup: {
-          from: "orderitems",
-          localField: "_id",
-          foreignField: "orderId",
-          as: "items",
-        },
-      },
-      { $unwind: "$items" },
-      { $group: { _id: null, productsShipped: { $sum: "$items.quantity" } } },
-    ]);
-    const productsShipped =
-      productsShippedStats.length > 0
-        ? productsShippedStats[0].productsShipped
-        : 0;
-
-    // Doanh thu theo category (từ orderItems của orders shipped, group by product.categoryId)
-    const revenueByCategory = await Order.aggregate([
-      { $match: { ...dateFilter, status: "completed" } },
-      {
-        $lookup: {
-          from: "orderitems",
-          localField: "_id",
-          foreignField: "orderId",
-          as: "items",
-        },
-      },
-      { $unwind: "$items" },
       {
         $lookup: {
           from: "products",
-          localField: "items.productId",
+          localField: "productId",
           foreignField: "_id",
           as: "product",
         },
@@ -1103,211 +1067,372 @@ exports.getAdminReport = async (req, res) => {
       { $unwind: "$product" },
       {
         $group: {
-          _id: "$product.categoryId",
-          totalRevenue: {
-            $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] },
+          _id: "$product.sellerId",
+        },
+      },
+    ]);
+
+    const activeSellerIds = activeSellerIdsAgg.map((s) => s._id);
+
+    const [
+      orderStats,
+      totalUsers,
+      topSellers,
+      totalProducts,
+      newProducts,
+      totalRevenueStats,
+      uniqueCustomersStats,
+      productsShippedStats,
+      ratingStats,
+      topRatedProducts,
+      lowStockProducts,
+      outOfStockProducts,
+      returnRequestsCount,
+      disputesCount,
+      revenueOverTime,
+      orderOverTime,
+      revenueByCategory,
+      topProducts,
+      recentActivity,
+      activeSellers,
+      activeBuyers,
+    ] = await Promise.all([
+      // Order status stats
+      Order.aggregate([
+        { $match: dateFilter },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+        { $project: { status: "$_id", count: 1, _id: 0 } },
+      ]),
+      User.countDocuments({}),
+      // Top sellers by revenue
+      Order.aggregate([
+        { $match: { ...dateFilter, status: "shipped" } },
+        {
+          $lookup: {
+            from: "products",
+            localField: "items.productId",
+            foreignField: "_id",
+            as: "product",
           },
         },
-      },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "_id",
-          foreignField: "_id",
-          as: "category",
-        },
-      },
-      { $unwind: "$category" },
-      { $project: { name: "$category.name", value: "$totalRevenue" } },
-    ]);
-
-    // Top destinations (group by address.city or country từ orders shipped)
-    const topDestinations = await Order.aggregate([
-      { $match: { ...dateFilter, status: "completed" } },
-      {
-        $lookup: {
-          from: "addresses",
-          localField: "addressId",
-          foreignField: "_id",
-          as: "address",
-        },
-      },
-      { $unwind: "$address" },
-      { $group: { _id: "$address.city", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 },
-      { $project: { name: "$_id", value: "$count" } },
-    ]);
-
-    // Doanh thu theo thời gian (group by date, ví dụ theo ngày)
-    const revenueOverTime = await Order.aggregate([
-      { $match: { ...dateFilter, status: "completed" } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$orderDate" } },
-          revenue: { $sum: "$totalPrice" },
-        },
-      },
-      { $sort: { _id: 1 } },
-      { $project: { date: "$_id", revenue: 1, _id: 0 } },
-    ]);
-
-    // Top products (từ orderItems của orders completed, group by productId)
-    const topProducts = await Order.aggregate([
-      { $match: { ...dateFilter, status: "completed" } },
-      {
-        $lookup: {
-          from: "orderitems",
-          localField: "_id",
-          foreignField: "orderId",
-          as: "items",
-        },
-      },
-      { $unwind: "$items" },
-      {
-        $group: {
-          _id: "$items.productId",
-          quantity: { $sum: "$items.quantity" },
-          revenue: {
-            $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] },
+        { $unwind: "$product" },
+        {
+          $group: {
+            _id: "$product.sellerId",
+            totalRevenue: { $sum: "$totalPrice" },
+            orderCount: { $sum: 1 },
           },
         },
-      },
-      {
-        $lookup: {
-          from: "products",
-          localField: "_id",
-          foreignField: "_id",
-          as: "product",
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "seller",
+          },
         },
-      },
-      { $unwind: "$product" },
-      { $sort: { revenue: -1 } },
-      { $limit: 5 },
-      { $project: { product: "$product.title", quantity: 1, revenue: 1 } },
+        { $unwind: "$seller" },
+        { $sort: { totalRevenue: -1 } },
+        { $limit: 5 },
+        {
+          $project: {
+            seller: "$seller.username",
+            totalRevenue: 1,
+            orderCount: 1,
+            _id: 0,
+          },
+        },
+      ]),
+      Product.countDocuments({}),
+      Product.countDocuments({
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      }),
+      Order.aggregate([
+        { $match: { ...dateFilter, status: { $in: ["shipped"] } } },
+        { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } },
+      ]),
+      Order.aggregate([
+        { $match: dateFilter },
+        { $group: { _id: "$buyerId" } },
+        { $count: "uniqueCustomers" },
+      ]),
+      Order.aggregate([
+        { $match: { ...dateFilter, status: "shipped" } },
+        {
+          $lookup: {
+            from: "orderitems",
+            localField: "_id",
+            foreignField: "orderId",
+            as: "items",
+          },
+        },
+        { $unwind: "$items" },
+        { $group: { _id: null, productsShipped: { $sum: "$items.quantity" } } },
+      ]),
+      Review.aggregate([
+        { $match: dateFilter },
+        {
+          $group: {
+            _id: null,
+            averageRating: { $avg: "$rating" },
+            totalReviews: { $sum: 1 },
+          },
+        },
+      ]),
+      Review.aggregate([
+        { $match: dateFilter },
+        { $group: { _id: "$productId", avgRating: { $avg: "$rating" } } },
+        {
+          $lookup: {
+            from: "products",
+            localField: "_id",
+            foreignField: "_id",
+            as: "product",
+          },
+        },
+        { $unwind: "$product" },
+        { $sort: { avgRating: -1 } },
+        { $limit: 5 },
+        {
+          $project: {
+            product: "$product.title",
+            avgRating: { $toDouble: { $round: ["$avgRating", 1] } },
+            _id: 0,
+          },
+        },
+      ]),
+      Inventory.aggregate([
+        { $match: { quantity: { $lt: 20, $gt: 0 } } },
+        {
+          $lookup: {
+            from: "products",
+            localField: "productId",
+            foreignField: "_id",
+            as: "product",
+          },
+        },
+        { $unwind: "$product" },
+        { $project: { product: "$product.title", quantity: 1, _id: 0 } },
+      ]),
+      Inventory.aggregate([
+        { $match: { quantity: 0 } },
+        {
+          $lookup: {
+            from: "products",
+            localField: "productId",
+            foreignField: "_id",
+            as: "product",
+          },
+        },
+        { $unwind: "$product" },
+        { $project: { product: "$product.title", quantity: 1, _id: 0 } },
+      ]),
+      ReturnRequest.countDocuments(dateFilter),
+      Dispute.countDocuments({ ...dateFilter, status: "open" }),
+      Order.aggregate([
+        { $match: { ...dateFilter, status: "shipped" } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$orderDate" } },
+            revenue: { $sum: "$totalPrice" },
+          },
+        },
+        { $sort: { _id: 1 } },
+        { $project: { date: "$_id", revenue: 1, _id: 0 } },
+      ]),
+      Order.aggregate([
+        { $match: dateFilter },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$orderDate" } },
+            orders: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+        { $project: { date: "$_id", orders: 1, _id: 0 } },
+      ]),
+      Order.aggregate([
+        { $match: { ...dateFilter, status: "shipped" } },
+        {
+          $lookup: {
+            from: "orderitems",
+            localField: "_id",
+            foreignField: "orderId",
+            as: "items",
+          },
+        },
+        { $unwind: "$items" },
+        {
+          $lookup: {
+            from: "products",
+            localField: "items.productId",
+            foreignField: "_id",
+            as: "product",
+          },
+        },
+        { $unwind: "$product" },
+        {
+          $group: {
+            _id: "$product.categoryId",
+            value: {
+              $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "_id",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+        { $unwind: "$category" },
+        { $project: { name: "$category.name", value: 1, _id: 0 } },
+      ]),
+      Order.aggregate([
+        { $match: { ...dateFilter, status: "shipped" } },
+        {
+          $lookup: {
+            from: "orderitems",
+            localField: "_id",
+            foreignField: "orderId",
+            as: "items",
+          },
+        },
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: "$items.productId",
+            quantity: { $sum: "$items.quantity" },
+            revenue: {
+              $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "products",
+            localField: "_id",
+            foreignField: "_id",
+            as: "product",
+          },
+        },
+        { $unwind: "$product" },
+        { $sort: { revenue: -1 } },
+        { $limit: 5 },
+        {
+          $project: {
+            product: "$product.title",
+            quantity: 1,
+            revenue: 1,
+            _id: 0,
+          },
+        },
+      ]),
+      Promise.all([
+        User.find(dateFilter)
+          .select("username createdAt")
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .lean()
+          .then((docs) =>
+            docs.map((d) => ({
+              type: "New User",
+              details: d.username,
+              createdAt: d.createdAt,
+            }))
+          ),
+        Order.find(dateFilter)
+          .select("totalPrice createdAt")
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .lean()
+          .then((docs) =>
+            docs.map((d) => ({
+              type: "New Order",
+              details: `Total: ${d.totalPrice}`,
+              createdAt: d.createdAt,
+            }))
+          ),
+        Product.find(dateFilter)
+          .select("title createdAt")
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .lean()
+          .then((docs) =>
+            docs.map((d) => ({
+              type: "New Product",
+              details: d.title,
+              createdAt: d.createdAt,
+            }))
+          ),
+      ]).then((results) =>
+        results
+          .flat()
+          .sort((a, b) => b.createdAt - a.createdAt)
+          .slice(0, 10)
+      ),
+      // Đếm active seller và buyer từ danh sách ID
+      User.countDocuments({ role: "seller", _id: { $in: activeSellerIds } }),
+      User.countDocuments({ role: "user", _id: { $in: activeBuyerIds } }),
     ]);
 
-    // Top categories by number of products
-    const topCategoriesByProducts = await Product.aggregate([
-      { $match: dateFilter },
-      { $group: { _id: "$categoryId", count: { $sum: 1 } } },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "_id",
-          foreignField: "_id",
-          as: "category",
-        },
-      },
-      { $unwind: "$category" },
-      { $sort: { count: -1 } },
-      { $limit: 5 },
-      { $project: { name: "$category.name", value: "$count" } },
-    ]);
+    const orderStatus = {
+      pending: 0,
+      shipping: 0,
+      shipped: 0,
+      failedToShip: 0,
+      rejected: 0,
+    };
+    orderStats.forEach((stat) => {
+      orderStatus[stat.status] = stat.count;
+    });
 
-    // Recent Activity: Fetch last 10 from various models, merge and sort
-    const recentUsers = await User.find(dateFilter)
-      .select("username createdAt")
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean()
-      .exec()
-      .then((docs) =>
-        docs.map((d) => ({
-          type: "New User",
-          details: d.username,
-          createdAt: d.createdAt,
-        }))
-      );
-    const recentStores = await Store.find(dateFilter)
-      .select("storeName createdAt")
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean()
-      .exec()
-      .then((docs) =>
-        docs.map((d) => ({
-          type: "New Store",
-          details: d.storeName,
-          createdAt: d.createdAt,
-        }))
-      );
-    const recentProducts = await Product.find(dateFilter)
-      .select("title createdAt")
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean()
-      .exec()
-      .then((docs) =>
-        docs.map((d) => ({
-          type: "New Product",
-          details: d.title,
-          createdAt: d.createdAt,
-        }))
-      );
-    const recentOrders = await Order.find(dateFilter)
-      .select("totalPrice createdAt")
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean()
-      .exec()
-      .then((docs) =>
-        docs.map((d) => ({
-          type: "New Order",
-          details: `Total: ${d.totalPrice}`,
-          createdAt: d.createdAt,
-        }))
-      );
-    const recentReviews = await Review.find(dateFilter)
-      .select("rating createdAt")
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean()
-      .exec()
-      .then((docs) =>
-        docs.map((d) => ({
-          type: "New Review",
-          details: `Rating: ${d.rating}`,
-          createdAt: d.createdAt,
-        }))
-      );
-
-    const recentActivity = [
-      ...recentUsers,
-      ...recentStores,
-      ...recentProducts,
-      ...recentOrders,
-      ...recentReviews,
-    ]
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 10); // Lấy 10 mới nhất
-
-    // Top 5 new users
-    const top5NewUsers = await User.find(dateFilter)
-      .select("username fullname email createdAt")
-      .sort({ createdAt: -1 })
-      .limit(5);
-
-    // Top 5 new sellers (users with role "seller")
-    const top5NewSellers = await User.find({ ...dateFilter, role: "seller" })
-      .select("username fullname email createdAt")
-      .sort({ createdAt: -1 })
-      .limit(5);
+    const conversionRate = totalUsers
+      ? ((activeBuyers / totalUsers) * 100).toFixed(2)
+      : 0;
 
     res.status(200).json({
       success: true,
-      data: {
-        totalRevenue,
-        uniqueCustomers,
-        productsShipped,
-        revenueByCategory,
-        topDestinations,
+      summary: {
+        totalRevenue: totalRevenueStats[0]?.totalRevenue || 0,
+        totalOrders: orderStats.reduce((sum, stat) => sum + stat.count, 0),
+        orderStatus,
+        uniqueCustomers: uniqueCustomersStats[0]?.uniqueCustomers || 0,
+        productsShipped: productsShippedStats[0]?.productsShipped || 0,
+        totalUsers,
+        activeSellers,
+        activeBuyers,
+        conversionRate,
+        totalProducts,
+        newProducts,
+      },
+
+      topSellers,
+      ratings: {
+        averageRating: ratingStats[0]?.averageRating?.toFixed(1) || 0,
+        totalReviews: ratingStats[0]?.totalReviews || 0,
+        topRatedProducts,
+      },
+      stock: {
+        lowStockProducts,
+        outOfStockProducts,
+      },
+      returns: {
+        returnRequestsCount,
+        disputesCount,
+      },
+      trends: {
         revenueOverTime,
+        orderOverTime,
+      },
+      insights: {
+        revenueByCategory,
         topProducts,
-        topCategoriesByProducts,
+      },
+      activities: {
         recentActivity,
-        top5NewUsers,
-        top5NewSellers,
       },
     });
   } catch (error) {
