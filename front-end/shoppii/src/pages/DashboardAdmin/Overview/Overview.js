@@ -178,6 +178,16 @@ const Overview = () => {
           <Grid item xs={12} sm={4}>
             <Card>
               <CardContent>
+                <Typography variant="h6">Total user</Typography>
+                <Typography variant="h4">
+                  {report.summary.totalUsers || 0}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Card>
+              <CardContent>
                 <Typography variant="h6">Unique Customers</Typography>
                 <Typography variant="h4">
                   {report.summary.uniqueCustomers || 0}
@@ -655,39 +665,6 @@ const Overview = () => {
               </Card>
             </Grid>
           )}
-
-          {/* Quick Links */}
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Quick Links
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Box sx={{ display: "flex", gap: 2 }}>
-                  <MuiLink component={Link} to="/admin/users" underline="none">
-                    <Button variant="contained" color="primary">
-                      Manage Users
-                    </Button>
-                  </MuiLink>
-                  <MuiLink component={Link} to="/admin/stores" underline="none">
-                    <Button variant="contained" color="primary">
-                      Manage Stores
-                    </Button>
-                  </MuiLink>
-                  <MuiLink
-                    component={Link}
-                    to="/admin/products"
-                    underline="none"
-                  >
-                    <Button variant="contained" color="primary">
-                      Manage Products
-                    </Button>
-                  </MuiLink>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
         </Grid>
       )}
     </Box>

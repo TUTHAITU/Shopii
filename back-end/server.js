@@ -40,7 +40,6 @@ const { connect } = require("mongoose");
 const router = require("./routers/index.js");
 const dotenv = require("dotenv");
 const cors = require("cors");
-
 const app = express();
 
 // CORS configuration

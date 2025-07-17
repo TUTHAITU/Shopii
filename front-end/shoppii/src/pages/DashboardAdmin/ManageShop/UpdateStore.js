@@ -46,14 +46,30 @@ export default function UpdateStore({
     try {
       const reqBody = { storeName, description, bannerImageURL, status };
       const { data } = await axios.put(
-        `http://localhost:9999/api/admin/stores/${targetStore._id}?skipAuth=true`,
-        reqBody,
+        `http://localhost:9999/api/admin/stores/${targetStore._id}/status?skipAuth=true`, // Chỉ cập nhật status qua endpoint /status
+        { status }, // Chỉ gửi status để cập nhật trạng thái
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
+      // Nếu cần cập nhật các trường khác, gửi thêm request tới endpoint chính
+      if (
+        storeName !== targetStore.storeName ||
+        description !== targetStore.description ||
+        bannerImageURL !== targetStore.bannerImageURL
+      ) {
+        await axios.put(
+          `http://localhost:9999/api/admin/stores/${targetStore._id}?skipAuth=true`,
+          { storeName, description, bannerImageURL },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+      }
       setSnackbar({
         open: true,
         msg: "Cập nhật thành công!",
