@@ -4,8 +4,9 @@ import { useDispatch } from 'react-redux';
 import { setCredentials } from '../features/auth/authSlice';
 import { register } from '../services/authService';
 import { toast } from 'react-toastify';
+import { motion } from 'framer-motion';
 
-// Icons (tái sử dụng từ SignIn.jsx)
+// Icons
 const EyeIcon = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -32,6 +33,7 @@ const SignUp = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,9 +42,12 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Mật khẩu không khớp');
+      toast.error('Passwords do not match');
       return;
     }
+    
+    setIsLoading(true);
+    
     try {
       const response = await register({
         username: formData.username,
@@ -54,55 +59,68 @@ const SignUp = () => {
         user: response.user,
         token: response.token,
       }));
-      toast.success('Đăng ký thành công!');
-      navigate('/signin'); // Chuyển đến trang đăng nhập sau khi đăng ký thành công
+      toast.success('Registration successful!');
+      navigate('/signin'); // Redirect to sign in page after successful registration
     } catch (error) {
-      toast.error(error.message || 'Đăng ký thất bại');
+      toast.error(error.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-lg"
+      >
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Đăng ký tài khoản
+          <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900">
+            Create Account
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Join us today and start shopping
+          </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        
+        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             {/* Username */}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Tên đăng nhập
+                Username
               </label>
               <input
                 id="username"
                 name="username"
                 type="text"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Tên đăng nhập"
+                className="mt-1 appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F52BA] focus:border-[#0F52BA] sm:text-sm transition-all duration-200"
+                placeholder="Username"
                 value={formData.username}
                 onChange={handleChange}
               />
             </div>
+            
             {/* Fullname */}
             <div>
               <label htmlFor="fullname" className="block text-sm font-medium text-gray-700">
-                Họ và tên
+                Full Name
               </label>
               <input
                 id="fullname"
                 name="fullname"
                 type="text"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Họ và tên"
+                className="mt-1 appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F52BA] focus:border-[#0F52BA] sm:text-sm transition-all duration-200"
+                placeholder="Your full name"
                 value={formData.fullname}
                 onChange={handleChange}
               />
             </div>
+            
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -114,16 +132,17 @@ const SignUp = () => {
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F52BA] focus:border-[#0F52BA] sm:text-sm transition-all duration-200"
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleChange}
               />
             </div>
+            
             {/* Password */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Mật khẩu
+                Password
               </label>
               <div className="mt-1 relative">
                 <input
@@ -132,8 +151,8 @@ const SignUp = () => {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Mật khẩu"
+                  className="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F52BA] focus:border-[#0F52BA] sm:text-sm transition-all duration-200"
+                  placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -146,10 +165,11 @@ const SignUp = () => {
                 </button>
               </div>
             </div>
+            
             {/* Confirm Password */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Xác nhận mật khẩu
+                Confirm Password
               </label>
               <div className="mt-1 relative">
                 <input
@@ -158,8 +178,8 @@ const SignUp = () => {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Xác nhận mật khẩu"
+                  className="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F52BA] focus:border-[#0F52BA] sm:text-sm transition-all duration-200"
+                  placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                 />
@@ -177,20 +197,31 @@ const SignUp = () => {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isLoading}
+              className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#0F52BA] hover:bg-[#0A3C8A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0F52BA] transition-all duration-200 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Đăng ký
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating account...
+                </>
+              ) : (
+                'Sign Up'
+              )}
             </button>
           </div>
 
-          <div className="text-sm text-center">
-            <span className="text-gray-600">Bạn đã có tài khoản? </span>
-            <Link to="/signin" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Đăng nhập
+          <div className="text-sm text-center mt-4">
+            <span className="text-gray-600">Already have an account? </span>
+            <Link to="/signin" className="font-medium text-[#0F52BA] hover:text-[#0A3C8A] transition-colors">
+              Sign In
             </Link>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };

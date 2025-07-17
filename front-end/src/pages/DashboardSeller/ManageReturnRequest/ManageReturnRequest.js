@@ -6,6 +6,8 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
+// Import api instead of SellerService
+import { api } from '../../../services/index';
 
 const statusColor = {
     pending: "warning",
@@ -41,17 +43,17 @@ export default function ManageReturnRequest() {
     const [statusFilter, setStatusFilter] = useState("");
 
     // Fetch return request list
-    const fetchList = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await axios.get("http://localhost:9999/api/seller/return-requests?skipAuth=true");
+            const res = await api.get("seller/return-requests");
             setRequests(res.data.data);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { fetchList(); }, []);
+    useEffect(() => { fetchData(); }, []);
 
     const handleOpen = (row) => {
         setSelected(row);
@@ -65,14 +67,26 @@ export default function ManageReturnRequest() {
         setReason("");
     };
 
-    const handleUpdate = async () => {
+    const handleSubmit = async () => {
         setSaving(true);
         try {
-            await axios.put(`http://localhost:9999/api/seller/return-requests/${selected._id}?skipAuth=true`, {
+            await api.put(`seller/return-requests/${selected._id}`, {
                 status
             });
-            await fetchList();
+
+            await fetchData();  // Reload data after update
             handleClose();
+            // setSnackbar({ // This line was removed as per the edit hint
+            //   open: true,
+            //   msg: "Return request updated successfully",
+            //   severity: "success"
+            // });
+        } catch (error) {
+            // setSnackbar({ // This line was removed as per the edit hint
+            //   open: true,
+            //   msg: "Failed to update return request",
+            //   severity: "error"
+            // });
         } finally {
             setSaving(false);
         }
@@ -217,7 +231,7 @@ export default function ManageReturnRequest() {
                 <DialogActions>
                     <Button onClick={handleClose}>Close</Button>
                     <Button
-                        onClick={handleUpdate}
+                        onClick={handleSubmit}
                         variant="contained"
                         disabled={saving}
                     >

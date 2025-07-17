@@ -66,15 +66,15 @@ const NewArrivals = () => {
             <Product
               _id={product._id}
               images={product.images}
-              name={product.name}
+              name={product.title} // Use title instead of name
               price={product.price}
               // color={product.color}
               isDeleted={product.isDeleted}
               description={product.description}
               specs={product.specs}
               inStock={product.inStock}
-              category={product.category.name}
-              brand={product.brand.name}
+              category={product.category?.name}
+              brand={product.brand?.name}
             />
           </div>
         ))}

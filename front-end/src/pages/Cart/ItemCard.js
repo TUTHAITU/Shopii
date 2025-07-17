@@ -1,5 +1,15 @@
 import React from "react";
-import { ImCross } from "react-icons/im";
+import { 
+  Box, 
+  Typography, 
+  IconButton, 
+  Checkbox,
+  Paper
+} from "@mui/material";
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import { motion } from "framer-motion";
 
 const ItemCard = ({ 
   item, 
@@ -21,51 +31,131 @@ const ItemCard = ({
   };
 
   return (
-    <div className="w-full grid grid-cols-6 mb-4 border py-2">
-      <div className="flex items-center justify-center">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={onSelect}
-          className="h-4 w-4"
-        />
-      </div>
-      <div className="flex col-span-2 items-center gap-4">
-        <ImCross
-          onClick={() => onRemoveItem(item._id)}
-          className="text-primeColor hover:text-red-500 duration-300 cursor-pointer"
-        />
-        <img 
-          className="w-24 h-24 object-contain" 
-          src={item.image} 
-          alt={item.name || "Product"} 
-        />
-        <h1 className="font-titleFont font-semibold text-sm">
-          {item.title || "Product Name"}
-        </h1>
-      </div>
-      <div className="flex items-center justify-center text-lg font-semibold">
-        ${item.price?.toFixed(2) || "0.00"}
-      </div>
-      <div className="flex items-center justify-center gap-2 text-lg">
-        <span
-          onClick={handleDecrease}
-          className="w-6 h-6 bg-gray-100 text-2xl flex items-center justify-center hover:bg-gray-300 cursor-pointer duration-300 border-[1px] border-gray-300 hover:border-gray-300"
-        >
-          -
-        </span>
-        <p>{item.quantity}</p>
-        <span
-          onClick={handleIncrease}
-          className="w-6 h-6 bg-gray-100 text-2xl flex items-center justify-center hover:bg-gray-300 cursor-pointer duration-300 border-[1px] border-gray-300 hover:border-gray-300"
-        >
-          +
-        </span>
-      </div>
-      <div className="flex items-center justify-center font-titleFont font-bold text-lg">
-        <p>${(item.quantity * (item.price || 0)).toFixed(2)}</p>
-      </div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          mb: 2,
+          p: 2,
+          borderRadius: 2,
+          border: '1px solid #eee',
+          transition: 'all 0.2s',
+          '&:hover': {
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          {/* Checkbox */}
+          <Box sx={{ mr: 1 }}>
+            <Checkbox
+              checked={isSelected}
+              onChange={onSelect}
+              sx={{ color: '#0F52BA', '&.Mui-checked': { color: '#0F52BA' } }}
+            />
+          </Box>
+          
+          {/* Product Image */}
+          <Box 
+            sx={{ 
+              width: 80, 
+              height: 80, 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#f9f9f9',
+              borderRadius: 1,
+              mr: 2,
+              overflow: 'hidden'
+            }}
+          >
+            <img 
+              src={item.image} 
+              alt={item.name || "Product"} 
+              style={{ 
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain'
+              }}
+            />
+          </Box>
+          
+          {/* Product Details */}
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              {item.title || item.name || "Product Name"}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              ${item.price?.toFixed(2) || "0.00"} per item
+            </Typography>
+          </Box>
+          
+          {/* Quantity Controls */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 3 }}>
+            <IconButton 
+              size="small" 
+              onClick={handleDecrease}
+              disabled={item.quantity <= 1}
+              sx={{ 
+                border: '1px solid #e0e0e0',
+                borderRadius: '4px 0 0 4px',
+                p: 0.5
+              }}
+            >
+              <RemoveIcon fontSize="small" />
+            </IconButton>
+            
+            <Box 
+              sx={{ 
+                px: 2, 
+                py: 0.5, 
+                minWidth: 40, 
+                textAlign: 'center',
+                border: '1px solid #e0e0e0',
+                borderLeft: 0,
+                borderRight: 0
+              }}
+            >
+              {item.quantity}
+            </Box>
+            
+            <IconButton 
+              size="small" 
+              onClick={handleIncrease}
+              sx={{ 
+                border: '1px solid #e0e0e0',
+                borderRadius: '0 4px 4px 0',
+                p: 0.5
+              }}
+            >
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          
+          {/* Subtotal */}
+          <Box sx={{ minWidth: 80, textAlign: 'right', mr: 2 }}>
+            <Typography variant="subtitle1" fontWeight={700} color="#0F52BA">
+              ${(item.quantity * (item.price || 0)).toFixed(2)}
+            </Typography>
+          </Box>
+          
+          {/* Remove Button */}
+          <IconButton 
+            onClick={() => onRemoveItem(item._id)} 
+            size="small"
+            sx={{ color: '#d32f2f' }}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      </Paper>
+    </motion.div>
   );
 };
 

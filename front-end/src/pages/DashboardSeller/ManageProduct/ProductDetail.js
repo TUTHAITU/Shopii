@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -12,8 +12,12 @@ import {
   Stack,
   TextField,
   Button,
+  Alert,
 } from "@mui/material";
 import axios from "axios";
+// Import api instead of SellerService
+import { api } from '../../../services/index';
+import { useSelector } from 'react-redux';
 
 // Hàm group các reply vào đúng review gốc dựa vào parentId
 function groupReviews(flatReviews) {
@@ -38,9 +42,12 @@ function groupReviews(flatReviews) {
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const [productDetail, setProductDetail] = useState([]);
+  const navigate = useNavigate();
+  const [productDetail, setProductDetail] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const token = useSelector((state) => state.auth.token);
 
   // State cho reply
   const [replyTexts, setReplyTexts] = useState({});
@@ -49,28 +56,45 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Lấy chi tiết sản phẩm
-        const res = await axios.get(
-          `http://localhost:9999/api/seller/products/${id}?skipAuth=true`
-        );
-        setProductDetail(res.data.data[0]);
+      if (!id) {
+        console.error("No product ID provided");
+        setError("Product ID is missing");
+        setLoading(false);
+        return;
+      }
 
-        // Lấy danh sách review (gồm cả review gốc và reply, có parentId)
-        const resReview = await axios.get(
-          `http://localhost:9999/api/seller/products/${id}/reviews?skipAuth=true`
-        );
+      console.log("Fetching product with ID:", id);
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Sử dụng api service thay vì axios trực tiếp
+        const res = await api.get(`seller/products/${id}`);
+        console.log("Product detail response:", res.data);
+        
+        if (!res.data || !res.data.data) {
+          throw new Error("Product data not found");
+        }
+        
+        setProductDetail(res.data.data);
+
+        // Lấy danh sách review
+        const resReview = await api.get(`seller/products/${id}/reviews`);
+        console.log("Reviews response:", resReview.data);
+        
         // Group lại để reply nằm đúng dưới review gốc
         const grouped = groupReviews(resReview.data.data || []);
         setReviews(grouped);
       } catch (err) {
+        console.error("Error fetching product details:", err);
         setProductDetail(null);
+        setError(err.message || "Failed to load product details");
       }
       setLoading(false);
     };
+    
     fetchData();
-  }, [id]);
+  }, [id, token]);
 
   // Xử lý nhập text reply
   const handleReplyChange = (reviewId, value) => {
@@ -85,9 +109,9 @@ const ProductDetail = () => {
     setErrorReply((prev) => ({ ...prev, [reviewId]: "" }));
 
     try {
-      // Gửi reply, backend trả về reply object
-      const res = await axios.post(
-        `http://localhost:9999/api/seller/products/${id}/reviews/${reviewId}/reply?skipAuth=true`,
+      // Sử dụng api service thay vì axios trực tiếp
+      const res = await api.post(
+        `seller/products/${id}/reviews/${reviewId}/reply`, 
         { comment }
       );
       const reply = res.data.data; // object trả về từ backend
@@ -114,18 +138,45 @@ const ProductDetail = () => {
     setPostingReply((prev) => ({ ...prev, [reviewId]: false }));
   };
 
-  if (loading)
+  if (loading) {
     return (
       <Box p={5} textAlign="center">
         <CircularProgress />
+        <Typography mt={2} color="text.secondary">
+          Loading product ID: {id}
+        </Typography>
       </Box>
     );
-  if (!productDetail || !productDetail.productId)
+  }
+
+  if (error) {
     return (
-      <Typography color="error" variant="h5" sx={{ m: 6, textAlign: "center" }}>
-        Product not found!
-      </Typography>
+      <Box p={5} textAlign="center">
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Button variant="contained" onClick={() => navigate('/manage-product')}>
+          Back to Products
+        </Button>
+      </Box>
     );
+  }
+  
+  if (!productDetail || !productDetail.product) {
+    return (
+      <Box p={5} textAlign="center">
+        <Typography color="error" variant="h5" sx={{ mb: 3 }}>
+          Product not found!
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          The product with ID "{id}" could not be found.
+        </Typography>
+        <Button variant="contained" onClick={() => navigate('/manage-product')}>
+          Back to Products
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box maxWidth="900px" mx="auto" mt={4}>
@@ -133,8 +184,8 @@ const ProductDetail = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={5}>
             <img
-              src={productDetail.productId.image}
-              alt={productDetail.productId.title}
+              src={productDetail.product.image}
+              alt={productDetail.product.title}
               style={{
                 width: "100%",
                 borderRadius: 16,
@@ -146,28 +197,28 @@ const ProductDetail = () => {
           </Grid>
           <Grid item xs={12} md={7}>
             <Typography variant="h4" fontWeight="bold" mb={2}>
-              {productDetail.productId.title}
+              {productDetail.product.title}
             </Typography>
             <Typography color="text.secondary" mb={1}>
-              <b>Category:</b> {productDetail.productId.categoryId?.name || "N/A"}
+              <b>Category:</b> {productDetail.categoryName || "N/A"}
             </Typography>
             <Typography color="success.main" variant="h5" mb={1}>
-              ${productDetail.productId.price}
+              ${productDetail.product.price}
             </Typography>
             <Typography variant="body1" mb={2}>
-              <b>Description:</b> {productDetail.productId.description}
+              <b>Description:</b> {productDetail.product.description}
             </Typography>
             <Typography variant="body2" mb={1}>
               <b>Status:</b>{" "}
-              {productDetail.productId.isAuction ? "Available" : "Not Available"}
+              {productDetail.product.isAuction ? "Available" : "Not Available"}
             </Typography>
             <Typography variant="body2" mb={1}>
-              <b>In Stock:</b> {productDetail.quantity}
+              <b>In Stock:</b> {productDetail.inventory.quantity}
             </Typography>
             <Typography variant="body2" mb={1}>
               <b>Last Updated Stock:</b>{" "}
-              {productDetail.updatedAt
-                ? new Date(productDetail.updatedAt).toLocaleString()
+              {productDetail.inventory.updatedAt
+                ? new Date(productDetail.inventory.updatedAt).toLocaleString()
                 : "N/A"}
             </Typography>
           </Grid>

@@ -11,9 +11,9 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
-import axios from 'axios';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import { api } from '../../../services/index';
 
 const VisuallyHiddenInput = styled('input')({
     clip: 'rect(0 0 0 0)',
@@ -44,29 +44,11 @@ export default function UpdateProduct({ targetProduct, onUpdated, open, handleCl
     const [snackbar, setSnackbar] = React.useState({ open: false, msg: '', severity: 'success' });
 
     React.useEffect(() => {
-        axios.get('http://localhost:9999/api/seller/categories?skipAuth=true')
+        // Use direct API call
+        api.get('seller/categories')
           .then(res => setCategories(res.data.data))
           .catch(() => setCategories([]));
       }, []);
-    
-    // React.useEffect(() => {
-    //     axios.get('http://localhost:9999/api/seller/products?skipAuth=true')
-    //         .then(res => setCategories(res.data.data))
-    //         .catch(() => setCategories([]));
-    // }, []);
-    // const cate = React.useMemo(() => {
-    //     if (!categories || categories.length === 0) return [];
-    //     const allCategories = categories
-    //         .map(p => p.productId?.categoryId)
-    //         .filter(Boolean);
-    //     const map = new Map();
-    //     allCategories.forEach(cat => {
-    //         if (cat && cat._id && !map.has(cat._id)) {
-    //             map.set(cat._id, cat);
-    //         }
-    //     });
-    //     return Array.from(map.values());
-    // }, [categories]);
 
     React.useEffect(() => {
         setTitle(targetProduct?.productId?.title || '');
@@ -99,10 +81,9 @@ export default function UpdateProduct({ targetProduct, onUpdated, open, handleCl
                 auctionEndTime: isAuction === 'true' ? auctionEndTime : undefined,
                 quantity: Number(quantity)
             };
-            const { data } = await axios.put(
-                `http://localhost:9999/api/seller/products/${targetProduct.productId._id}?skipAuth=true`,
-                reqBody
-            );
+            
+            // Use direct API call
+            await api.put(`seller/products/${targetProduct.productId._id}`, reqBody);
 
             setSnackbar({ open: true, msg: "Cập nhật thành công!", severity: 'success' });
             if (onUpdated) onUpdated();

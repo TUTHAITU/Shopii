@@ -6,7 +6,7 @@ import {
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
-import axios from 'axios';
+import SellerService from '../../../services/api/SellerService';
 import StarIcon from '@mui/icons-material/Star';
 
 export default function StoreProfile() {
@@ -45,8 +45,8 @@ export default function StoreProfile() {
     const fetchProfile = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('http://localhost:9999/api/seller/store?skipAuth=true');
-            setStore(res.data.data);
+            const res = await SellerService.getStoreProfile();
+            setStore(res.data);
         } catch {
             setStore(null);
         } finally {
@@ -76,7 +76,7 @@ export default function StoreProfile() {
     const handleSaveStore = async () => {
         setSavingStore(true);
         try {
-            await axios.put('http://localhost:9999/api/seller/store?skipAuth=true', formStore);
+            await SellerService.updateStoreProfile(formStore);
             await fetchProfile();
             setOpenEditStore(false);
         } finally {
@@ -115,7 +115,7 @@ export default function StoreProfile() {
     const handleSaveSeller = async () => {
         setSavingSeller(true);
         try {
-            await axios.put('http://localhost:9999/api/seller/profile?skipAuth=true', formSeller);
+            await SellerService.updateSellerProfile(formSeller);
             await fetchProfile();
             setOpenEditSeller(false);
         } finally {

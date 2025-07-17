@@ -6,6 +6,8 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
+// Import api instead of SellerService
+import { api } from '../../../services/index';
 
 const statusColor = {
     open: "warning",
@@ -43,10 +45,18 @@ export default function ManageComplaint() {
 
     // Fetch dispute list
     useEffect(() => {
-        setLoading(true);
-        axios.get("http://localhost:9999/api/seller/disputes?skipAuth=true")
-            .then(res => setDisputes(res.data.data))
-            .finally(() => setLoading(false));
+        const fetchDisputes = async () => {
+            setLoading(true);
+            try {
+                const response = await api.get("seller/disputes");
+                setDisputes(response.data.data);
+            } catch (error) {
+                console.error("Error fetching disputes:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDisputes();
     }, []);
 
     const handleOpen = (row) => {
@@ -64,15 +74,23 @@ export default function ManageComplaint() {
     const handleResolve = async () => {
         if (!resolveInput.trim()) return;
         setSaving(true);
-        await axios.put(`http://localhost:9999/api/seller/disputes/${selected._id}/resolve?skipAuth=true`, {
-            resolution: resolveInput,
-            status: resolveStatus,
-        });
-        // Refetch list
-        const res = await axios.get("http://localhost:9999/api/seller/disputes?skipAuth=true");
-        setDisputes(res.data.data);
-        setSaving(false);
-        handleClose();
+        
+        try {
+            await api.put(`seller/disputes/${selected._id}/resolve`, {
+                resolution: resolveInput,
+                status: resolveStatus,
+            });
+            
+            // Refresh the disputes list
+            const response = await api.get("seller/disputes");
+            setDisputes(response.data.data);
+            
+            setSaving(false);
+            handleClose();
+        } catch (error) {
+            console.error("Error resolving dispute:", error);
+            setSaving(false);
+        }
     };
 
     // Filtered data

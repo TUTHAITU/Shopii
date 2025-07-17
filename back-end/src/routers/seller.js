@@ -1,15 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const sellerController = require("../controllers/sellerController");
-const { authMiddleware, isSeller, authorizeRoles} = require("../middleware/auth.middleware");
-
-// Middleware xác thực và kiểm tra vai trò seller
-router.use(authMiddleware);
-// router.use(authorizeRoles("seller")); 
-router.use(isSeller);
+const { authMiddleware, isSeller } = require("../middleware/auth.middleware");
 
 // Đăng nhập và chuyển chế độ
 router.post("/login", sellerController.loginAndSwitch);
+
+// Tạo cửa hàng (chỉ cần xác thực, không cần kiểm tra vai trò seller)
+router.post("/store", authMiddleware, sellerController.createStore);
+
+// Tất cả các route khác yêu cầu xác thực và vai trò seller
+router.use(authMiddleware); // Add this line to ensure authentication happens first
+router.use(isSeller);
 
 // Quản lý hồ sơ cửa hàng và người bán
 router.get("/store", sellerController.getProfileStoreAndSeller);
@@ -36,6 +38,13 @@ router.post("/products/:productId/reviews/:reviewId/reply",sellerController.repl
 
 // Quản lý đơn hàng
 router.get("/orders/history", sellerController.getOrderHistory);
+router.put("/orders/item/:orderItemId/status", sellerController.updateOrderItemStatus);
+router.get("/orders/:orderId/payment", sellerController.getOrderPayment);
+router.put("/payments/:paymentId/status", sellerController.updatePaymentStatus);
+
+// Shipping management
+router.get("/shipping", sellerController.getShippingInfo);
+router.put("/shipping/:shippingInfoId/status", sellerController.updateShippingStatus);
 
 // Khiếu nại
 router.get("/disputes", sellerController.getDisputes);

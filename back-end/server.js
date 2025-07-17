@@ -1,40 +1,3 @@
-// const express = require("express");
-// const dotenv = require("dotenv");
-// const cors = require("cors");
-// const bodyParser = require("body-parser");
-// const morgan = require("morgan");
-
-// // Import các router
-// const routes = require("./routers/index.js");
-
-// // Kết nối với MongoDB
-// const ConnectDB = require("./config/db");
-// const app = express();
-
-// // app.get('/', async(req, res)=>{
-// //     try {
-// //         res.send({message: 'Welcome to Practical Exam!'});
-// //     } catch (error) {
-// //         res.send({error: error.message});
-// //     }
-// // });
-
-// // Sử dụng dotenv để load các biến môi trường
-// dotenv.config();
-
-// // Middleware
-// app.use(cors()); // Cho phép CORS
-// app.use(bodyParser.json()); // Phân tích cú pháp JSON
-// app.use(morgan("dev")); // Ghi lại các log HTTP
-
-// // Kết nối MongoDB
-// ConnectDB();
-
-// // Sử dụng các router cho các API endpoint
-// app.use("/api", routes); // Tất cả các route sẽ bắt đầu bằng /api
-
-// const PORT = process.env.PORT || 9999;
-// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const express = require("express");
 const { connect } = require("mongoose");
 const router = require("./src/routers/index.js");
@@ -42,18 +5,65 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 
 const app = express();
+dotenv.config(); // Move dotenv.config() before using process.env
+
 app.use(cors({
   origin: [process.env.CLIENT_URL || 'http://localhost:3000'],
   credentials: true
 }));
 app.use(express.json());
 
-dotenv.config();
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  
+  // Log request body for POST/PUT requests
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('Request body:', JSON.stringify(req.body));
+  }
+  
+  // Capture the original send
+  const originalSend = res.send;
+  
+  // Override send to log response
+  res.send = function(body) {
+    console.log(`[${new Date().toISOString()}] Response ${res.statusCode} for ${req.url}`);
+    
+    // Restore original send and call it
+    res.send = originalSend;
+    return res.send(body);
+  };
+  
+  next();
+});
+
 const PORT = process.env.PORT;
 const MONGO_URI = process.env.MONGO_URI;
-connect(MONGO_URI);
+
+// Improve MongoDB connection with error handling
+console.log('Connecting to MongoDB...');
+connect(MONGO_URI)
+  .then(() => console.log('MongoDB connected successfully'))
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
 
 app.use("/api", router);
+
+// Fallback route for handling payment redirects
+app.get('/', (req, res) => {
+  const { paymentStatus } = req.query;
+  const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+  
+  if (paymentStatus) {
+    // Redirect to frontend with payment status
+    return res.redirect(`${frontendUrl}?paymentStatus=${paymentStatus}`);
+  }
+  
+  // Default redirect to frontend
+  res.redirect(frontendUrl);
+});
 
 app.listen(PORT, () => {
   console.log(`server is running at PORT ${PORT}`);

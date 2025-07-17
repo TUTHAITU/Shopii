@@ -66,7 +66,6 @@ const {
 } = require('../controllers/voucherController');
 
 // Áp dụng middleware xác thực và phân quyền admin cho tất cả các route trong file này
-router.use(authMiddleware1);
 router.use(authorizeRoles("admin")); // Hoặc router.use(isAdmin);
 
 // --- User Management Routes ---

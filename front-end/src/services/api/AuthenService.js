@@ -13,7 +13,7 @@ class AuthenService {
         try {
             const response = await api.post('user/login', data);
             if (response.data.accessToken) {
-                localStorage.setItem('accessToken', response.data.accessToken);
+                localStorage.setItem('token', response.data.accessToken);
                 localStorage.setItem('refreshToken', response.data.refreshToken);
             }
             return response.data;
@@ -60,7 +60,7 @@ class AuthenService {
 
     async updateProfile(data) {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = localStorage.getItem('token');
             const response = await api.put('user/profile', data, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -81,7 +81,7 @@ class AuthenService {
 
     async getProfile() {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = localStorage.getItem('token');
             const response = await api.get(`user/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -92,13 +92,34 @@ class AuthenService {
     }
     async logout() {
         try {
-            const token = localStorage.getItem('accessToken');
-            await api.post('user/logout', {}, {
-                headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true,
-            });
+            const token = localStorage.getItem('token');
+            // Try to notify the backend about logout
+            try {
+                await api.post('user/logout', {}, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    withCredentials: true,
+                });
+            } catch (e) {
+                console.log('Error during server logout, continuing with local logout', e);
+            }
+            
+            // Clear all auth-related data from localStorage
+            localStorage.removeItem('token');
             localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            
+            // Clear any session/cookie data if needed
+            document.cookie.split(";").forEach(function(c) {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            return { success: true, message: 'Logged out successfully' };
         } catch (error) {
+            console.error('Logout error:', error);
+            // Even if there's an error, try to clear tokens
+            localStorage.removeItem('token');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
             throw error;
         }
     }

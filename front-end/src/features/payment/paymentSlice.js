@@ -15,9 +15,28 @@ export const createPayment = createAsyncThunk(
       const response = await axios.post(`${API_URL}/buyers/payments`, paymentData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return response.data;
+      
+      // Add extra validation to ensure we have required fields based on payment method
+      const data = response.data;
+      
+      if (paymentData.method === 'VietQR' && (!data.qrData || !data.qrData.qrDataURL)) {
+        console.error('VietQR API response missing qrData or qrDataURL:', data);
+        return rejectWithValue('QR code generation failed. Please try another payment method.');
+      }
+      
+      if (paymentData.method === 'PayOS' && !data.paymentUrl) {
+        console.error('PayOS API response missing paymentUrl:', data);
+        return rejectWithValue('Payment URL generation failed. Please try another payment method.');
+      }
+      
+      return data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create payment');
+      console.error('Payment creation error:', error);
+      return rejectWithValue(
+        error.response?.data?.message || 
+        error.response?.data?.details || 
+        'Failed to create payment. Please try again.'
+      );
     }
   }
 );

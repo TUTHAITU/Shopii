@@ -11,6 +11,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 import Checkbox from '@mui/material/Checkbox';
+// Import api instead of SellerService
+import { api } from '../../../services/index';
 
 export default function ManageInventory() {
     const { handleSetDashboardTitle } = useOutletContext();
@@ -30,7 +32,7 @@ export default function ManageInventory() {
 
     // Lấy dữ liệu tồn kho
     const fetchInventory = React.useCallback(() => {
-        axios.get("http://localhost:9999/api/seller/products?skipAuth=true")
+        api.get("seller/products")
             .then(res => setInventoryList(res.data.data))
             .catch(() => setInventoryList([]));
     }, []);
@@ -86,15 +88,14 @@ export default function ManageInventory() {
 
     const handleSaveClick = async (productId) => {
         try {
-            await axios.put(`http://localhost:9999/api/seller/inventory/${productId}?skipAuth=true`, {
+            await api.put(`seller/inventory/${productId}`, {
                 quantity: editQuantity
             });
-            setSnackbar({ open: true, msg: "Update thành công!", severity: 'success' });
+            setSnackbar({ open: true, msg: "Inventory updated successfully", severity: 'success' });
+            fetchInventory(); // Refresh the list
             setEditProductId(null);
-
-            fetchInventory();
-        } catch (e) {
-            setSnackbar({ open: true, msg: "Có lỗi xảy ra!", severity: 'error' });
+        } catch (error) {
+            setSnackbar({ open: true, msg: "Failed to update inventory", severity: 'error' });
         }
     };
 

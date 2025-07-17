@@ -9,7 +9,6 @@ const ShippingInfo = require("./ShippingInfo");
 const ReturnRequest = require("./ReturnRequest");
 const Bid = require("./Bid");
 const Review = require("./Review");
-const Message = require("./Message");
 const Coupon = require("./Coupon");
 const Inventory = require("./Inventory");
 const Feedback = require("./Feedback");
@@ -28,7 +27,6 @@ module.exports = {
   ReturnRequest,
   Bid,
   Review,
-  Message,
   Coupon,
   Inventory,
   Feedback,

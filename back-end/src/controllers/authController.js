@@ -144,3 +144,50 @@ exports.forgotPassword = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
+
+// Thay đổi vai trò người dùng
+exports.changeRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    const userId = req.user.id; // Lấy ID người dùng từ middleware xác thực
+
+    // Kiểm tra đầu vào
+    if (!role) {
+      return res.status(400).json({ success: false, message: "Vai trò mới là bắt buộc" });
+    }
+    if (!["buyer", "seller"].includes(role)) {
+      return res.status(400).json({ success: false, message: "Vai trò không hợp lệ" });
+    }
+
+    // Tìm và cập nhật người dùng
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+    }
+
+    // Cập nhật vai trò
+    user.role = role;
+    await user.save();
+
+    // Tạo JWT token mới với vai trò đã cập nhật
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      success: true,
+      message: `Vai trò đã được cập nhật thành ${role}`,
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    logger.error("Lỗi thay đổi vai trò:", error);
+    res.status(500).json({ success: false, message: "Lỗi server" });
+  }
+};

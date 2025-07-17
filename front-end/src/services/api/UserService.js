@@ -18,8 +18,14 @@ class UserService {
         return response.data;
     }
 
-
-
+    async changeRole(role) {
+        try {
+            const result = await api.put('/buyers/change-role', { role });
+            return result.data;
+        } catch (error) {
+            throw error;
+        }
+    }
 
     async updateUser(userId, email, fullName, address, phoneNumber, role, isVerified) {
         const result = await api.put(`/user/update/${userId}`, { email, fullName, address, phoneNumber, role, isVerified });

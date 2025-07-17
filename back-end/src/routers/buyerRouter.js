@@ -1,10 +1,11 @@
 const express = require('express');
-const { authMiddleware1, isBuyer } = require('../middleware/auth.middleware');
+const { authMiddleware, isBuyer, isSellerOrBuyer } = require('../middleware/auth.middleware');
 const orderController = require('../controllers/orderController');
 const cartController = require('../controllers/cartController'); // Thêm dòng này
 const addressController = require('../controllers/addressController');
 const { getVoucherByCode } = require('../controllers/voucherController');
 const paymentController = require('../controllers/paymentController');
+const authController = require('../controllers/authController');
 
 const buyerRouter = express.Router();
 
@@ -14,7 +15,11 @@ buyerRouter.get('/payments/payos/callback', paymentController.payosCallback);
 buyerRouter.get('/payments/payos/cancel', paymentController.payosCallback); // Using the same handler for cancel, as it handles failure cases
 
 // Protected routes (yêu cầu xác thực là buyer)
-buyerRouter.use(authMiddleware1, isBuyer);
+buyerRouter.use(authMiddleware); // Add this line to ensure authentication happens first
+buyerRouter.use(isSellerOrBuyer);
+
+// User role management
+buyerRouter.put('/change-role', authController.changeRole);
 
 // Quản lý giỏ hàng
 buyerRouter.post('/cart/add', cartController.addToCart);

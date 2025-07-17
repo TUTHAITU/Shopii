@@ -4,6 +4,8 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import AddIcon from '@mui/icons-material/Add';
 import { styled } from '@mui/material/styles';
 import axios from 'axios'; // For making API requests
+// Import api instead of SellerService
+import { api } from '../../../services/index';
 
 // Define VisuallyHiddenInput for file upload
 const VisuallyHiddenInput = styled('input')({
@@ -37,9 +39,13 @@ export default function AddProduct({ onAdded }) {
 
   // Fetch categories
   React.useEffect(() => {
-    axios.get('http://localhost:9999/api/seller/categories?skipAuth=true')
-      .then(res => setCategories(res.data.data))
-      .catch(() => setCategories([]));
+    // Use direct API call
+    api.get('seller/categories')
+      .then(res => setCategories(res.data.data || []))
+      .catch(err => {
+        console.error("Error fetching categories:", err);
+        setCategories([]);
+      });
   }, []);
 
   const handleAddProduct = async (e) => {
@@ -48,11 +54,11 @@ export default function AddProduct({ onAdded }) {
     const requestBody = {
       title,
       description,
-      price,
-      isAuction: isAuction === 'true',
+      price: Number(price),
+      image,
       categoryId,
-      quantity,
-      image: typeof image === 'string' ? image : '',
+      isAuction: isAuction === 'true',
+      quantity: Number(quantity)
     };
 
     // if (isAuction === 'true' && auctionEndTime) {
@@ -60,15 +66,13 @@ export default function AddProduct({ onAdded }) {
     // }
 
     try {
-      const result = await axios.post('http://localhost:9999/api/seller/products?skipAuth=true', requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      // Use direct API call
+      const result = await api.post('seller/products', requestBody);
 
       if (result.data?.success) {
         setSnackbar({ open: true, msg: 'Product added successfully!', severity: 'success' });
         setOpenAddProductDialog(false);
+        // Reset form fields
         setTitle('');
         setDescription('');
         setCategoryId('');
@@ -97,16 +101,16 @@ export default function AddProduct({ onAdded }) {
   };
 
   const handleAddCategory = async () => {
-    const requestBody = {
-      name: newCategoryName,
-      description: newCategoryDescription,
-    };
+    if (!newCategoryName.trim()) {
+      setSnackbar({ open: true, msg: "Category name is required", severity: 'error' });
+      return;
+    }
 
     try {
-      const result = await axios.post('http://localhost:9999/api/seller/categories?skipAuth=true', requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // Use direct API call
+      const result = await api.post('seller/categories', {
+        name: newCategoryName,
+        description: newCategoryDescription
       });
 
       if (result.data?.success) {

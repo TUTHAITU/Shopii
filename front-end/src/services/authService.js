@@ -16,11 +16,25 @@ export const login = async (credentials) => {
 };
 
 export const register = async (userData) => {
-  const response = await axios.post(`${API_URL}/register`, userData);
-  return response.data;
+  try {
+    const response = await axios.post(`${API_URL}/register`, userData);
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || 
+      'Đã xảy ra lỗi khi đăng ký'
+    );
+  }
 };
 
 export const forgotPassword = async (data) => {
-  const response = await axios.post(`${API_URL}/forgot-password`, data);
-  return response.data;
+  try {
+    const response = await axios.post(`${API_URL}/forgot-password`, data);
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || 
+      'Đã xảy ra lỗi khi yêu cầu khôi phục mật khẩu'
+    );
+  }
 };

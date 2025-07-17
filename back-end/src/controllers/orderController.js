@@ -29,14 +29,29 @@ const createOrder = async (req, res) => {
     const productDetails = {};
 
     for (const item of selectedItems) {
+      // Validate product exists
       const product = await Product.findById(item.productId);
       if (!product) {
         return res.status(404).json({ error: `Product ${item.productId} not found` });
       }
 
-      const inventory = await Inventory.findOne({ productId: item.productId });
-      if (!inventory || inventory.quantity < item.quantity) {
-        return res.status(400).json({ error: `Insufficient inventory for product ${item.productId}` });
+      // Find or create inventory record
+      let inventory = await Inventory.findOne({ productId: item.productId });
+      
+      // If inventory doesn't exist, create it with 0 quantity
+      if (!inventory) {
+        inventory = new Inventory({
+          productId: item.productId,
+          quantity: 0
+        });
+        await inventory.save();
+      }
+      
+      // Validate inventory quantity
+      if (inventory.quantity < item.quantity) {
+        return res.status(400).json({ 
+          error: `Insufficient inventory for product ${product.title} (ID: ${item.productId}). Available: ${inventory.quantity}, Requested: ${item.quantity}`
+        });
       }
 
       const unitPrice = product.price;
@@ -90,23 +105,29 @@ const createOrder = async (req, res) => {
       });
       await orderItem.save();
 
-      // Deduct quantity from inventory
+      // Deduct quantity from inventory - using upsert:false since we know inventory exists
       await Inventory.findOneAndUpdate(
         { productId: item.productId },
         { 
           $inc: { quantity: -item.quantity },
           $set: { lastUpdated: new Date() }
         },
-        { upsert: false } // No upsert, assume inventory exists
+        { upsert: false } // No upsert, assume inventory exists (we created it if needed above)
       );
     }
 
     // Step 5: Send email notification assuming payment is successful (e.g., for COD or post-order confirmation)
     // Note: If payment is handled separately (e.g., via gateway webhook), move this to a payment success handler.
     // For now, assuming order creation implies payment success for simplicity.
-    const emailSubject = 'Payment Successful and Order Confirmation';
-    const emailText = `Dear Customer,\n\nYour payment was successful, and your order has been placed.\nOrder ID: ${order._id}\nTotal Amount: ${totalPrice}\n\nThank you for shopping with us!`;
-    await sendEmail(buyerEmail, emailSubject, emailText);
+    try {
+      const emailSubject = 'Payment Successful and Order Confirmation';
+      const emailText = `Dear Customer,\n\nYour payment was successful, and your order has been placed.\nOrder ID: ${order._id}\nTotal Amount: ${totalPrice}\n\nThank you for shopping with us!`;
+      await sendEmail(buyerEmail, emailSubject, emailText);
+      console.log('Email sent successfully to:', buyerEmail);
+    } catch (emailError) {
+      console.error('Failed to send order confirmation email:', emailError);
+      // Continue with order creation even if email fails
+    }
 
     // Success response
     return res.status(201).json({ 
@@ -117,7 +138,7 @@ const createOrder = async (req, res) => {
 
   } catch (error) {
     console.error('Error creating order:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 };
 

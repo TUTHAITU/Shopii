@@ -53,15 +53,31 @@ const createPayment = async (req, res) => {
       await payment.save();
 
       try {
+        // Check required environment variables
+        if (!process.env.BANK_ACCOUNT_NO || !process.env.BANK_ACCOUNT_NAME || 
+            !process.env.BANK_ACQ_ID || !process.env.VIETQR_CLIENT_ID || 
+            !process.env.VIETQR_API_KEY) {
+          console.error('Thiếu cấu hình VietQR. Vui lòng kiểm tra các biến môi trường BANK_* và VIETQR_*');
+          payment.status = 'failed';
+          await payment.save();
+          return res.status(500).json({ message: 'Lỗi cấu hình cổng thanh toán VietQR.' });
+        }
+
         const vietQR_API_URL = 'https://api.vietqr.io/v2/generate';
-        const NGROK_URL = 'https://0fb31285b3ef.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
+        const NGROK_URL = 'https://34e6f6632c0e.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
         const callbackUrl = `${NGROK_URL}/api/payments/vietqr/callback`;
+
+        // Chuyển đổi giá trị sang số nguyên VND (không có dấu thập phân)
+        const amountInVnd = Math.round(order.totalPrice);
+        
+        // Log giá trị gửi đi
+        console.log('Sending to VietQR API - Amount:', amountInVnd, 'Original:', order.totalPrice);
 
         const response = await axios.post(vietQR_API_URL, {
           accountNo: process.env.BANK_ACCOUNT_NO,
           accountName: process.env.BANK_ACCOUNT_NAME,
           acqId: parseInt(process.env.BANK_ACQ_ID),
-          amount: order.totalPrice,
+          amount: amountInVnd,
           addInfo: orderId,
           format: 'text',
           template: 'compact',
@@ -75,12 +91,21 @@ const createPayment = async (req, res) => {
         });
 
         const responseData = response.data;
+        console.log('VietQR API response:', JSON.stringify(responseData, null, 2));
 
         if (responseData.code !== '00') {
           console.error('Lỗi khi tạo mã QR từ VietQR API:', responseData.desc);
           payment.status = 'failed';
           await payment.save();
           return res.status(500).json({ message: 'Không thể tạo mã thanh toán QR.', details: responseData.desc });
+        }
+
+        // Validate the QR data contains the necessary information
+        if (!responseData.data || !responseData.data.qrDataURL) {
+          console.error('VietQR API response missing QR data:', responseData);
+          payment.status = 'failed';
+          await payment.save();
+          return res.status(500).json({ message: 'Dữ liệu QR không hợp lệ từ VietQR API.' });
         }
 
         return res.status(201).json({
@@ -92,7 +117,7 @@ const createPayment = async (req, res) => {
         console.error('Lỗi gọi API VietQR:', apiError.response ? apiError.response.data : apiError.message);
         payment.status = 'failed';
         await payment.save();
-        return res.status(502).json({ message: 'Lỗi giao tiếp với cổng thanh toán.' });
+        return res.status(502).json({ message: 'Lỗi giao tiếp với cổng thanh toán VietQR.' });
       }
     } else if (method === 'PayOS') {
       await payment.save();
@@ -107,7 +132,7 @@ const createPayment = async (req, res) => {
         }
 
         const PAYOS_API_URL = 'https://api-merchant.payos.vn/v2/payment-requests'; // URL API chính thức của PayOS
-        const NGROK_URL = 'https://0fb31285b3ef.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
+        const NGROK_URL = 'https://34e6f6632c0e.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
         const returnUrl = `${NGROK_URL}/api/payments/payos/callback`;
         const cancelUrl = `${NGROK_URL}/api/payments/payos/cancel`;
 
@@ -117,15 +142,19 @@ const createPayment = async (req, res) => {
         // Giới hạn description tối đa 25 ký tự
         const shortDescription = `Thanh toán #${numericOrderCode % 10000}`; // Rút gọn mô tả
         
+        // Chuyển đổi giá trị sang số nguyên VND (không có dấu thập phân)
+        const amountInVnd = Math.round(order.totalPrice);
+        console.log('Sending to PayOS API - Amount:', amountInVnd, 'Original:', order.totalPrice);
+        
         // Tính signature theo tài liệu PayOS với dữ liệu mới
-        const rawSignature = `amount=${order.totalPrice}&cancelUrl=${cancelUrl}&description=${shortDescription}&orderCode=${numericOrderCode}&returnUrl=${returnUrl}`;
+        const rawSignature = `amount=${amountInVnd}&cancelUrl=${cancelUrl}&description=${shortDescription}&orderCode=${numericOrderCode}&returnUrl=${returnUrl}`;
         const signature = crypto.createHmac('sha256', process.env.PAYOS_CHECKSUM_KEY)
           .update(rawSignature)
           .digest('hex');
 
         const paymentData = {
           orderCode: numericOrderCode, // Sử dụng mã số thay vì chuỗi
-          amount: order.totalPrice,
+          amount: amountInVnd,
           description: shortDescription, // Sử dụng mô tả đã rút gọn
           returnUrl,
           cancelUrl,
@@ -145,15 +174,22 @@ const createPayment = async (req, res) => {
         });
 
         const responseData = response.data;
+        console.log('PayOS API response:', JSON.stringify(responseData, null, 2));
 
         if (responseData.code !== '00') {
-          console.error('Lỗi khi tạo mã QR thanh toán PayOS:', responseData.desc);
+          console.error('Lỗi khi tạo thanh toán PayOS:', responseData.desc);
           payment.status = 'failed';
           await payment.save();
-          return res.status(500).json({ message: 'Không thể tạo mã QR thanh toán PayOS.', details: responseData.desc });
+          return res.status(500).json({ message: 'Không thể tạo thanh toán PayOS.', details: responseData.desc });
         }
 
-        console.log('PayOS response data:', JSON.stringify(responseData.data, null, 2)); // Log để debug
+        // Validate that checkoutUrl is present
+        if (!responseData.data || !responseData.data.checkoutUrl) {
+          console.error('PayOS API response missing checkout URL:', responseData);
+          payment.status = 'failed';
+          await payment.save();
+          return res.status(500).json({ message: 'Dữ liệu không hợp lệ từ PayOS API.' });
+        }
 
         return res.status(201).json({
           message: 'Đã tạo yêu cầu thanh toán PayOS thành công',
@@ -201,11 +237,25 @@ const vietQRCallback = async (req, res) => {
 
     await payment.save();
 
-    // Cập nhật trạng thái đơn hàng nếu cần
-    const order = await Order.findById(orderId);
-    if (order && payment.status === 'paid') {
-      order.status = 'paid';
-      await order.save();
+    // Nếu payment status là paid, cập nhật các OrderItems liên quan sang shipping
+    if (payment.status === 'paid') {
+      try {
+        // Tìm các OrderItems thuộc về đơn hàng và đang ở trạng thái pending
+        const orderItems = await OrderItem.find({ 
+          orderId: payment.orderId,
+          status: "pending"
+        });
+        
+        // Cập nhật các OrderItems sang trạng thái shipping
+        for (const item of orderItems) {
+          item.status = "shipping";
+          await item.save();
+        }
+        
+        console.log(`Updated ${orderItems.length} order items to shipping status for orderId: ${orderId}`);
+      } catch (orderError) {
+        console.error('Error updating order items:', orderError);
+      }
     }
 
     console.log(`Cập nhật trạng thái thanh toán thành công cho orderId: ${orderId}, status: ${payment.status}`);
@@ -228,42 +278,74 @@ const vietQRCallback = async (req, res) => {
  */
 const payosCallback = async (req, res) => {
   try {
-    const { orderCode, status } = req.query; // PayOS thường gửi dữ liệu qua query params, kiểm tra tài liệu chính thức
+    console.log('PayOS callback received with params:', req.query);
+    const { orderCode, status } = req.query; // PayOS thường gửi dữ liệu qua query params
 
-    // Tìm payment theo orderId (orderCode)
-    const payment = await Payment.findOne({ orderId: orderCode });
+    if (!orderCode) {
+      console.error('Missing orderCode in PayOS callback');
+      return res.status(400).json({ message: 'Missing orderCode parameter' });
+    }
+
+    console.log('Looking for payment with transactionId:', orderCode);
+    
+    // Tìm payment theo transactionId (orderCode)
+    let payment = await Payment.findOne({ transactionId: orderCode.toString() });
+    
+    // Nếu không tìm thấy bằng transactionId, thử tìm bằng orderId
+    if (!payment) {
+      console.log('Payment not found by transactionId, trying with orderId');
+      payment = await Payment.findOne({ orderId: orderCode });
+    }
+    
     if (!payment) {
       console.error('Không tìm thấy thanh toán cho orderCode:', orderCode);
       return res.status(404).json({ message: 'Không tìm thấy thanh toán' });
     }
 
+    console.log('Payment found:', payment._id);
+
     // Cập nhật trạng thái thanh toán
     if (status === 'PAID') {
       payment.status = 'paid';
       payment.paidAt = new Date();
+      console.log('Payment status updated to paid');
     } else {
       payment.status = 'failed';
+      console.log('Payment status updated to failed');
     }
 
     await payment.save();
+    console.log('Payment saved successfully');
 
-    // Cập nhật trạng thái đơn hàng nếu cần
-    const order = await Order.findById(orderCode);
-    if (order && payment.status === 'paid') {
-      order.status = 'paid';
-      await order.save();
+    // Nếu payment status là paid, cập nhật các OrderItems liên quan sang shipping
+    if (payment.status === 'paid') {
+      try {
+        // Tìm các OrderItems thuộc về đơn hàng và đang ở trạng thái pending
+        const orderItems = await OrderItem.find({ 
+          orderId: payment.orderId,
+          status: "pending"
+        });
+        
+        // Cập nhật các OrderItems sang trạng thái shipping
+        for (const item of orderItems) {
+          item.status = "shipping";
+          await item.save();
+        }
+        
+        console.log(`Updated ${orderItems.length} order items to shipping status`);
+      } catch (orderError) {
+        console.error('Error updating order items:', orderError);
+      }
     }
 
-    console.log(`Cập nhật trạng thái thanh toán PayOS thành công cho orderCode: ${orderCode}, status: ${payment.status}`);
-    
-    // Chuyển hướng người dùng về trang kết quả thanh toán
-    const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-result?status=${payment.status}&orderId=${orderCode}`;
-    return res.redirect(redirectUrl);
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Payment status updated successfully',
+      status: payment.status
+    });
   } catch (error) {
-    console.error('Lỗi xử lý callback PayOS:', error);
-    // Chuyển hướng người dùng về trang lỗi
-    const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-result?status=error&message=server-error`;
-    return res.redirect(redirectUrl);
+    console.error('Error in PayOS callback:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 

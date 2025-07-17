@@ -14,7 +14,6 @@ import { Grid } from '@mui/material';
 import { TextField } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import SearchIcon from '@mui/icons-material/Search';
-import axios from "axios";
 import EditIcon from '@mui/icons-material/Edit';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
@@ -22,6 +21,7 @@ import UpdateProduct from './UpdateProduct'; // Đường dẫn đúng file củ
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import Chip from '@mui/material/Chip';
+import { api } from '../../../services/index';
 
 export default function Products({ products, onProductUpdated }) {
   const navigate = useNavigate();
@@ -34,10 +34,18 @@ export default function Products({ products, onProductUpdated }) {
   const [deletingProduct, setDeletingProduct] = React.useState(null);
   const [snackbar, setSnackbar] = React.useState({ open: false, msg: '', severity: 'success' });
 
+  // Helper function for navigation to product detail
+  const navigateToProduct = (productId) => {
+    console.log("Navigating to product:", productId);
+    // Make sure path is correct relative to current route
+    navigate(`../product/${productId}`);
+  };
+
   const handleDeleteProduct = async () => {
     if (!deletingProduct) return;
     try {
-      await axios.delete(`http://localhost:9999/api/seller/products/${deletingProduct.productId._id}?skipAuth=true`);
+      // Use direct API call
+      await api.delete(`seller/products/${deletingProduct.productId._id}`);
       setSnackbar({ open: true, msg: 'Xóa sản phẩm thành công!', severity: 'success' });
       setDeletingProduct(null);
       onProductUpdated(); // Reload lại list từ parent
@@ -253,7 +261,7 @@ export default function Products({ products, onProductUpdated }) {
                 <TableBody>
                   {pageData.map((product, index) => (
                     <TableRow style={{ cursor: 'pointer' }} key={product.productId._id}>
-                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>
+                      <TableCell onClick={() => navigateToProduct(product.productId._id)}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                           <img
                             src={product.productId?.image}
@@ -266,7 +274,10 @@ export default function Products({ products, onProductUpdated }) {
                             <Typography
                               variant="subtitle1"
                               fontWeight={600}
-                              onClick={() => navigate(`/product/${product.productId._id}`)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigateToProduct(product.productId._id);
+                              }}
                               sx={{ cursor: 'pointer' }}
                             >
                               {product.productId?.title}
@@ -280,9 +291,9 @@ export default function Products({ products, onProductUpdated }) {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>{`$${product.productId?.price}`}</TableCell>
-                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>{product.quantity}</TableCell>
-                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>
+                      <TableCell onClick={() => navigateToProduct(product.productId._id)}>{`$${product.productId?.price}`}</TableCell>
+                      <TableCell onClick={() => navigateToProduct(product.productId._id)}>{product.quantity}</TableCell>
+                      <TableCell onClick={() => navigateToProduct(product.productId._id)}>
                         {product.productId?.isAuction ? (
                           <Chip label="Available" color="success" size="small" />
                         ) : (
@@ -290,7 +301,7 @@ export default function Products({ products, onProductUpdated }) {
                         )}
                       </TableCell>
 
-                      <TableCell onClick={() => navigate(`/product/${product.productId._id}`)}>{product.productId?.categoryId.name}</TableCell>
+                      <TableCell onClick={() => navigateToProduct(product.productId._id)}>{product.productId?.categoryId.name}</TableCell>
                       <TableCell>
                         <Tooltip title="Update">
                           <EditIcon

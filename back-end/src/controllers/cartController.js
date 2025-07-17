@@ -18,6 +18,14 @@ const addToCart = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // Check if the user is a seller trying to add their own product
+    if (req.user.role === 'seller' && product.sellerId.toString() === userId) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Sellers cannot add their own products to cart' 
+      });
+    }
+
     // Tìm giỏ hàng của người dùng
     let cart = await Cart.findOne({ userId });
     if (cart) {
