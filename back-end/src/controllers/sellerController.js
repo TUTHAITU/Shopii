@@ -1023,6 +1023,14 @@ exports.updateOrderItemStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order item not found" });
     }
     
+    // Kiểm tra xem order item đã ở trạng thái shipped chưa
+    if (orderItem.status === "shipped") {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Cannot update status. Order item has already been shipped." 
+      });
+    }
+    
     // Kiểm tra sản phẩm thuộc seller hiện tại
     const product = await Product.findById(orderItem.productId);
     if (!product || product.sellerId.toString() !== req.user.id) {
@@ -1138,6 +1146,14 @@ exports.updateShippingStatus = async (req, res) => {
     const orderItem = await OrderItem.findById(shippingInfo.orderItemId);
     if (!orderItem) {
       return res.status(404).json({ success: false, message: "Order item not found" });
+    }
+    
+    // Kiểm tra xem order item đã ở trạng thái shipped chưa
+    if (orderItem.status === "shipped") {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Cannot update status. Order item has already been shipped." 
+      });
     }
     
     // Verify seller owns the product

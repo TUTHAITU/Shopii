@@ -92,8 +92,7 @@ const Checkout = () => {
   const [phoneError, setPhoneError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // State for selected payment method
-  const [paymentMethod, setPaymentMethod] = useState('COD');
+  // Removed payment method state
 
   // Fetch addresses on component mount and clear voucher on unmount
   useEffect(() => {
@@ -180,7 +179,7 @@ const Checkout = () => {
     toast.info("Coupon code removed.");
   };
 
-  // Handle placing the order, now including the payment method
+  // Handle placing the order, removing the paymentMethod
   const handlePlaceOrder = async () => {
     if (!selectedAddressId) {
       toast.error("Please select a shipping address");
@@ -195,8 +194,8 @@ const Checkout = () => {
         quantity: item.quantity
       })), 
       selectedAddressId, 
-      couponCode: voucher ? voucher.code : '',
-      paymentMethod
+      couponCode: voucher ? voucher.code : ''
+      // Removed paymentMethod
     };
 
     try {
@@ -212,8 +211,7 @@ const Checkout = () => {
       navigate("/payment", { 
         state: { 
           orderId: result.orderId, 
-          totalPrice: result.totalPrice, 
-          paymentMethod 
+          totalPrice: result.totalPrice
         } 
       });
     } catch (error) {
@@ -256,7 +254,7 @@ const Checkout = () => {
         </Typography>
         
         <Grid container spacing={4}>
-          {/* Left side: Shipping, coupon, and payment method */}
+          {/* Left side: Shipping and coupon */}
           <Grid item xs={12} md={7}>
             <Paper 
               elevation={3} 
@@ -359,7 +357,6 @@ const Checkout = () => {
               elevation={3} 
               sx={{ 
                 p: 4, 
-                mb: 4, 
                 borderRadius: 2,
                 boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
               }}
@@ -426,84 +423,7 @@ const Checkout = () => {
               )}
             </Paper>
             
-            <Paper 
-              elevation={3} 
-              sx={{ 
-                p: 4, 
-                borderRadius: 2,
-                boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <PaymentIcon sx={{ mr: 1, color: '#0F52BA' }} />
-                <Typography variant="h5" fontWeight={600}>
-                  Payment Method
-                </Typography>
-              </Box>
-              
-              <Divider sx={{ mb: 3 }} />
-              
-              <RadioGroup
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-              >
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 2, 
-                    mb: 2, 
-                    borderRadius: 2,
-                    borderColor: paymentMethod === 'COD' ? '#0F52BA' : 'divider',
-                    backgroundColor: paymentMethod === 'COD' ? 'rgba(15, 82, 186, 0.04)' : 'transparent',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <FormControlLabel
-                    value="COD"
-                    control={<Radio sx={{ color: '#0F52BA', '&.Mui-checked': { color: '#0F52BA' } }} />}
-                    label="Cash on Delivery (COD)"
-                    sx={{ width: '100%' }}
-                  />
-                </Paper>
-                
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 2, 
-                    mb: 2, 
-                    borderRadius: 2,
-                    borderColor: paymentMethod === 'VietQR' ? '#0F52BA' : 'divider',
-                    backgroundColor: paymentMethod === 'VietQR' ? 'rgba(15, 82, 186, 0.04)' : 'transparent',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <FormControlLabel
-                    value="VietQR"
-                    control={<Radio sx={{ color: '#0F52BA', '&.Mui-checked': { color: '#0F52BA' } }} />}
-                    label="VietQR Payment"
-                    sx={{ width: '100%' }}
-                  />
-                </Paper>
-                
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 2, 
-                    borderRadius: 2,
-                    borderColor: paymentMethod === 'PayOS' ? '#0F52BA' : 'divider',
-                    backgroundColor: paymentMethod === 'PayOS' ? 'rgba(15, 82, 186, 0.04)' : 'transparent',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <FormControlLabel
-                    value="PayOS"
-                    control={<Radio sx={{ color: '#0F52BA', '&.Mui-checked': { color: '#0F52BA' } }} />}
-                    label="PayOS"
-                    sx={{ width: '100%' }}
-                  />
-                </Paper>
-              </RadioGroup>
-            </Paper>
+            {/* Removed Payment Method section */}
           </Grid>
           
           {/* Right side: Order summary */}

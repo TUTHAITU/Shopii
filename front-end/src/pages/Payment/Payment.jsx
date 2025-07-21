@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { createPayment, resetPayment } from "../../features/payment/paymentSlice";
+import { createPayment, resetPayment, checkPaymentStatus } from "../../features/payment/paymentSlice";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { 
@@ -32,85 +32,112 @@ const Payment = () => {
   const dispatch = useDispatch();
   const payosIframeRef = useRef(null);
 
-  const { orderId, totalPrice, paymentMethod: initialPaymentMethod } = location.state || {
+  const { orderId, totalPrice } = location.state || {
     orderId: null,
-    totalPrice: 0,
-    initialPaymentMethod: 'COD'
+    totalPrice: 0
   };
 
   // Đảm bảo totalPrice là số nguyên cho các API thanh toán
   const formattedPrice = Number(totalPrice).toFixed(2);
   const roundedPrice = Math.round(totalPrice);
 
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(initialPaymentMethod || 'COD');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('COD');
   const [showPayosIframe, setShowPayosIframe] = useState(false);
   const [paymentPolling, setPaymentPolling] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState(null);
 
-  const { payment, loading, error, success } = useSelector((state) => state.payment);
+  const { payment, paymentStatus, loading, error, success } = useSelector((state) => state.payment);
   const { token } = useSelector((state) => state.auth);
 
-  // Polling for VietQR payment status
-  useEffect(() => {
-    let pollingInterval;
-    
-    if (success && selectedPaymentMethod === 'VietQR' && paymentPolling) {
-      pollingInterval = setInterval(async () => {
-        try {
-          // Check payment status
-          const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9999/api';
-          const response = await axios.get(`${API_URL}/buyers/payments/status/${orderId}`, {
-            headers: { Authorization: `Bearer ${token}` }
+  // Hàm kiểm tra trạng thái thanh toán
+  const checkPaymentStatusHandler = async () => {
+    try {
+      // Dispatch action kiểm tra trạng thái
+      const resultAction = await dispatch(checkPaymentStatus(orderId));
+      if (checkPaymentStatus.fulfilled.match(resultAction)) {
+        const data = resultAction.payload;
+        const status = data?.payment?.status;
+        
+        if (status === 'paid') {
+          clearPolling();
+          toast.success("Thanh toán thành công!");
+          navigate('/payment-result', { 
+            state: { status: 'paid', orderId: orderId },
+            replace: true 
           });
-          
-          const paymentStatus = response.data.payment.status;
-          if (paymentStatus === 'paid') {
-            clearInterval(pollingInterval);
-            toast.success("Payment successful!");
-            navigate('/payment-result', { 
-              state: { status: 'paid', orderId: orderId },
-              replace: true 
-            });
-          } else if (paymentStatus === 'failed') {
-            clearInterval(pollingInterval);
-            toast.error("Payment failed!");
-            navigate('/payment-result', { 
-              state: { status: 'failed', orderId: orderId },
-              replace: true 
-            });
-          }
-        } catch (err) {
-          console.error("Error checking payment status:", err);
+        } else if (status === 'failed') {
+          clearPolling();
+          toast.error("Thanh toán thất bại!");
+          navigate('/payment-result', { 
+            state: { status: 'failed', orderId: orderId },
+            replace: true 
+          });
         }
-      }, 5000); // Check every 5 seconds
+      }
+    } catch (err) {
+      console.error("Lỗi khi kiểm tra trạng thái thanh toán:", err);
     }
+  };
+
+  // Hàm xóa interval polling
+  const clearPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+      setPaymentPolling(false);
+    }
+  };
+
+  // Khởi tạo polling
+  const startPaymentPolling = () => {
+    // Xóa polling cũ nếu có
+    clearPolling();
     
-    return () => {
-      if (pollingInterval) clearInterval(pollingInterval);
-    };
-  }, [success, selectedPaymentMethod, paymentPolling, orderId, token, navigate]);
+    // Tạo polling mới
+    setPaymentPolling(true);
+    const interval = setInterval(() => {
+      checkPaymentStatusHandler();
+    }, 5000); // Check every 5 seconds
+    
+    setPollingInterval(interval);
+  };
+  
+  // Xóa polling khi component unmount
+  useEffect(() => {
+    return () => clearPolling();
+  }, []);
+
+  // Polling for payment status
+  useEffect(() => {
+    if (success && (selectedPaymentMethod === 'VietQR' || selectedPaymentMethod === 'PayOS')) {
+      if ((selectedPaymentMethod === 'VietQR' && payment?.qrData?.qrDataURL) || 
+          (selectedPaymentMethod === 'PayOS' && payment?.paymentUrl)) {
+        startPaymentPolling();
+      }
+    }
+  }, [success, selectedPaymentMethod, payment]);
 
   useEffect(() => {
     if (success) {
       if (selectedPaymentMethod === 'VietQR') {
         if (payment?.qrData?.qrDataURL) {
-          toast.success("QR code has been generated. Please scan to complete payment.");
-          setPaymentPolling(true); // Start polling when QR is generated
+          toast.success("Mã QR đã được tạo. Vui lòng quét mã để hoàn tất thanh toán.");
         } else {
-          console.error("VietQR response is missing QR data:", payment);
-          toast.error("Failed to generate QR code. Please try another payment method.");
+          console.error("Phản hồi VietQR thiếu dữ liệu QR:", payment);
+          toast.error("Không thể tạo mã QR. Vui lòng thử phương thức thanh toán khác.");
           dispatch(resetPayment());
         }
       } else if (selectedPaymentMethod === 'PayOS') {
         if (payment?.paymentUrl) {
           setShowPayosIframe(true);
-          toast.success("PayOS payment gateway opened");
+          toast.success("Cổng thanh toán PayOS đã mở");
         } else {
-          console.error("PayOS response is missing payment URL:", payment);
-          toast.error("Could not create PayOS payment link");
+          console.error("Phản hồi PayOS thiếu URL thanh toán:", payment);
+          toast.error("Không thể tạo liên kết thanh toán PayOS");
           dispatch(resetPayment());
         }
       } else if (selectedPaymentMethod === 'COD') {
-        toast.success("Cash on delivery order created successfully.");
+        toast.success("Đã tạo đơn hàng thanh toán khi nhận hàng thành công.");
         setTimeout(() => {
           navigate('/payment-result', { 
             state: { status: 'paid', orderId: orderId },
@@ -157,9 +184,10 @@ const Payment = () => {
     dispatch(createPayment({ orderId, method: selectedPaymentMethod }));
   };
 
+  // Xử lý khi đóng cổng thanh toán
   const handleBackToHome = () => {
     setShowPayosIframe(false);
-    setPaymentPolling(false);
+    clearPolling();
     dispatch(resetPayment());
     navigate("/");
   };
@@ -201,7 +229,7 @@ const Payment = () => {
           }}
         >
           <PaymentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-          Payment
+          Select Payment Method
         </Typography>
         
         {showPayosIframe && payment?.paymentUrl ? (

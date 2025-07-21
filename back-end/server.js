@@ -3,6 +3,7 @@ const { connect } = require("mongoose");
 const router = require("./src/routers/index.js");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const { initScheduler } = require("./src/config/scheduler");
 
 const app = express();
 dotenv.config(); // Move dotenv.config() before using process.env
@@ -67,4 +68,7 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`server is running at PORT ${PORT}`);
+  
+  // Initialize schedulers after server starts
+  initScheduler();
 });

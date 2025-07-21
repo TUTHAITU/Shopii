@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { resetPayment } from '../../features/payment/paymentSlice';
+import { resetPayment, checkPaymentStatus } from '../../features/payment/paymentSlice';
 import { motion } from 'framer-motion';
 import { 
   Box, 
@@ -22,25 +22,88 @@ const PaymentResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { token } = useSelector((state) => state.auth);
   const [countDown, setCountDown] = useState(5);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [paymentResult, setPaymentResult] = useState({
+    status: '',
+    orderId: '',
+    message: ''
+  });
   
   // Get query parameters from URL
   const query = new URLSearchParams(location.search);
-  const status = query.get('status') || location.state?.status;
-  const orderId = query.get('orderId') || location.state?.orderId;
-  const message = query.get('message') || location.state?.message;
+  const queryStatus = query.get('status');
+  const queryOrderId = query.get('orderId') || query.get('orderCode');
+  const queryMessage = query.get('message');
+  const locationState = location.state || {};
+
+  // Check PayOS specific status
+  const payosStatus = query.get('status'); // PAID, CANCELLED, etc.
   
+  // Ưu tiên sử dụng location state trước, sau đó là query params
   useEffect(() => {
+    const getStatusInfo = async () => {
+      setIsVerifying(true);
+      
+      // Sử dụng thông tin từ URL hoặc state
+      let finalStatus = locationState.status || queryStatus;
+      const orderId = locationState.orderId || queryOrderId;
+      const message = locationState.message || queryMessage;
+      
+      // Đối với PayOS, chúng ta cần dịch trạng thái
+      if (payosStatus === 'PAID') {
+        finalStatus = 'paid';
+      } else if (payosStatus === 'CANCELLED' || payosStatus === 'FAILED') {
+        finalStatus = 'failed';
+      }
+      
+      // Nếu có orderId nhưng không có status rõ ràng, kiểm tra với API
+      if (orderId && (!finalStatus || finalStatus === 'pending')) {
+        try {
+          if (token) {
+            const resultAction = await dispatch(checkPaymentStatus(orderId));
+            if (checkPaymentStatus.fulfilled.match(resultAction)) {
+              const data = resultAction.payload;
+              if (data?.payment?.status === 'paid') {
+                finalStatus = 'paid';
+              } else if (data?.payment?.status === 'failed') {
+                finalStatus = 'failed';
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error verifying payment:', error);
+        }
+      }
+      
+      // Set final result
+      setPaymentResult({
+        status: finalStatus || 'unknown',
+        orderId: orderId || '',
+        message: message || ''
+      });
+      
+      setIsVerifying(false);
+    };
+    
+    getStatusInfo();
+    
     // Reset payment state in Redux
     dispatch(resetPayment());
+  }, [dispatch, locationState, queryStatus, queryOrderId, queryMessage, payosStatus, token]);
+  
+  // Show toast and start countdown after verification
+  useEffect(() => {
+    if (isVerifying) return;
     
     // Show toast based on status
-    if (status === 'paid') {
-      toast.success('Payment successful!');
-    } else if (status === 'failed') {
-      toast.error('Payment failed!');
+    if (paymentResult.status === 'paid') {
+      toast.success('Thanh toán thành công!');
+    } else if (paymentResult.status === 'failed') {
+      toast.error('Thanh toán thất bại!');
     } else {
-      toast.error(message || 'An error occurred during payment.');
+      toast.error(paymentResult.message || 'Đã xảy ra lỗi trong quá trình thanh toán.');
     }
     
     // Start countdown to redirect to home
@@ -56,7 +119,7 @@ const PaymentResult = () => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [status, message, dispatch, navigate]);
+  }, [isVerifying, paymentResult, navigate]);
   
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>
@@ -74,7 +137,14 @@ const PaymentResult = () => {
             boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
           }}
         >
-          {status === 'paid' ? (
+          {isVerifying ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+              <CircularProgress size={60} sx={{ mb: 3, color: '#0F52BA' }} />
+              <Typography variant="h5" fontWeight={600}>
+                Đang xác minh thanh toán...
+              </Typography>
+            </Box>
+          ) : paymentResult.status === 'paid' ? (
             <motion.div
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
@@ -92,15 +162,15 @@ const PaymentResult = () => {
                 }} 
               />
               <Typography variant="h4" fontWeight={700} gutterBottom>
-                Payment Successful!
+                Thanh toán thành công!
               </Typography>
-              {orderId && (
+              {paymentResult.orderId && (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="body1" color="text.secondary" gutterBottom>
-                    Order ID:
+                    Mã đơn hàng:
                   </Typography>
                   <Typography variant="h6" fontWeight={600} sx={{ color: '#0F52BA' }}>
-                    {orderId}
+                    {paymentResult.orderId}
                   </Typography>
                 </Box>
               )}
@@ -113,7 +183,7 @@ const PaymentResult = () => {
                 mb: 4
               }}>
                 <Typography variant="body1">
-                  Thank you for your purchase! Your order has been successfully processed.
+                  Cảm ơn bạn đã mua hàng! Đơn hàng của bạn đã được xử lý thành công.
                 </Typography>
               </Box>
             </motion.div>
@@ -135,12 +205,12 @@ const PaymentResult = () => {
                 }} 
               />
               <Typography variant="h4" fontWeight={700} gutterBottom>
-                Payment Failed!
+                Thanh toán thất bại!
               </Typography>
-              {message && (
+              {paymentResult.message && (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="body1" color="text.secondary">
-                    {message}
+                    {paymentResult.message}
                   </Typography>
                 </Box>
               )}
@@ -153,7 +223,7 @@ const PaymentResult = () => {
                 mb: 4
               }}>
                 <Typography variant="body1">
-                  Something went wrong with your payment. Please try again or contact customer support.
+                  Đã xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ khách hàng.
                 </Typography>
               </Box>
             </motion.div>
@@ -161,17 +231,19 @@ const PaymentResult = () => {
           
           <Divider sx={{ my: 3 }} />
           
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 4 }}>
-            <CircularProgress 
-              variant="determinate" 
-              value={(countDown / 5) * 100} 
-              size={24} 
-              sx={{ mr: 2, color: '#0F52BA' }} 
-            />
-            <Typography variant="body1" color="text.secondary">
-              You will be redirected to the home page in <strong>{countDown}</strong> seconds
-            </Typography>
-          </Box>
+          {!isVerifying && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 4 }}>
+              <CircularProgress 
+                variant="determinate" 
+                value={(countDown / 5) * 100} 
+                size={24} 
+                sx={{ mr: 2, color: '#0F52BA' }} 
+              />
+              <Typography variant="body1" color="text.secondary">
+                Bạn sẽ được chuyển đến trang chủ trong <strong>{countDown}</strong> giây
+              </Typography>
+            </Box>
+          )}
           
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button
@@ -187,10 +259,10 @@ const PaymentResult = () => {
                 py: 1.2
               }}
             >
-              Go to Home
+              Về trang chủ
             </Button>
             
-            {status === 'paid' && (
+            {paymentResult.status === 'paid' && (
               <Button
                 variant="outlined"
                 startIcon={<ReceiptLongIcon />}
@@ -207,7 +279,7 @@ const PaymentResult = () => {
                   py: 1.2
                 }}
               >
-                View Orders
+                Xem đơn hàng
               </Button>
             )}
           </Box>

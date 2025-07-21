@@ -191,3 +191,115 @@ exports.changeRole = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
+
+// Get user profile
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get user ID from auth middleware
+
+    const user = await User.findById(userId).select('-password'); // Exclude password
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    logger.error("Error getting user profile:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Update user profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get user ID from auth middleware
+    const { fullname, email, avatarURL } = req.body;
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Validate email if provided
+    if (email && email !== user.email) {
+      if (!validateEmail(email)) {
+        return res.status(400).json({ success: false, message: "Invalid email format" });
+      }
+      // Check if email is already in use
+      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({ success: false, message: "Email already in use" });
+      }
+      user.email = email;
+    }
+
+    // Update fields if provided
+    if (fullname) user.fullname = fullname;
+    if (avatarURL) user.avatarURL = avatarURL;
+
+    await user.save();
+
+    // Return updated user (without password)
+    const updatedUser = await User.findById(userId).select('-password');
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      data: updatedUser
+    });
+  } catch (error) {
+    logger.error("Error updating user profile:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Update user password
+exports.updatePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    // Validation
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Current password and new password are required" 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "New password must be at least 6 characters" 
+      });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    // Update password
+    user.password = newPassword; // Will be hashed by the pre-save hook
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Password updated successfully"
+    });
+  } catch (error) {
+    logger.error("Error updating password:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};

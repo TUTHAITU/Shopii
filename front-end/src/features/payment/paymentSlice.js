@@ -41,17 +41,45 @@ export const createPayment = createAsyncThunk(
   }
 );
 
+// Thêm hàm kiểm tra trạng thái thanh toán
+export const checkPaymentStatus = createAsyncThunk(
+  'payment/checkPaymentStatus',
+  async (orderId, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token;
+      if (!token) {
+        return rejectWithValue('No token found');
+      }
+      
+      const response = await axios.get(`${API_URL}/buyers/payments/status/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Payment status check error:', error);
+      return rejectWithValue(
+        error.response?.data?.message || 
+        'Failed to check payment status.'
+      );
+    }
+  }
+);
+
 const paymentSlice = createSlice({
   name: 'payment',
   initialState: {
     payment: null,
+    paymentStatus: null,
     loading: false,
+    statusChecking: false,
     error: null,
     success: false,
   },
   reducers: {
     resetPayment: (state) => {
       state.payment = null;
+      state.paymentStatus = null;
       state.success = false;
       state.error = null;
     },
@@ -72,6 +100,17 @@ const paymentSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
         state.success = false;
+      })
+      // Thêm reducers cho checkPaymentStatus
+      .addCase(checkPaymentStatus.pending, (state) => {
+        state.statusChecking = true;
+      })
+      .addCase(checkPaymentStatus.fulfilled, (state, action) => {
+        state.statusChecking = false;
+        state.paymentStatus = action.payload;
+      })
+      .addCase(checkPaymentStatus.rejected, (state) => {
+        state.statusChecking = false;
       });
   },
 });

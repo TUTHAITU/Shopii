@@ -81,6 +81,10 @@ const router = createBrowserRouter(
         <Route path="/address" element={<Address />}></Route>
         <Route path="/payment" element={<Payment />}></Route>
         <Route path="/payment-result" element={<PaymentResult />}></Route>
+        <Route path="/profile" element={<div className="w-full my-10 px-4">
+          <h1 className="text-2xl font-bold mb-4">User Profile</h1>
+          <p className="text-gray-600">Profile page is coming soon.</p>
+        </div>}></Route>
       </Route>
       
       <Route path="/" element={<ManagerDashboardSellerLaydout />} errorElement={<ErrorPage />}>

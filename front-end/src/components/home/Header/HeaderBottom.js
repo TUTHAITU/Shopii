@@ -40,8 +40,8 @@ const HeaderBottom = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [userName, setUserName] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('accessToken'));
   
-  const isLoggedIn = !!localStorage.getItem('accessToken');
   const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:9999";
 
   // Fetch products function
@@ -66,6 +66,11 @@ const HeaderBottom = () => {
   const fetchUserData = useCallback(async () => {
     try {
       const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setIsLoggedIn(false);
+        return;
+      }
+      
       const response = await axios.get(`${API_BASE_URL}/api/profile`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -73,10 +78,22 @@ const HeaderBottom = () => {
       });
       setUserName(response.data.fullname || response.data.username);
       dispatch(setUserInfo(response.data));
+      setIsLoggedIn(true);
     } catch (error) {
       console.error("Failed to fetch user profile:", error);
+      if (error.response && error.response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('accessToken');
+        setIsLoggedIn(false);
+      }
     }
   }, [API_BASE_URL, dispatch]);
+
+  // Effect to check login status whenever component renders
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    setIsLoggedIn(!!token);
+  }, []);
 
   // Effect to load data when component mounts
   useEffect(() => {
@@ -135,9 +152,16 @@ const HeaderBottom = () => {
       
       localStorage.removeItem('accessToken');
       dispatch(resetUserInfo());
+      setIsLoggedIn(false);
+      setUserName(null);
       navigate('/signin');
     } catch (error) {
       console.error("Logout failed:", error);
+      // Still clear the token on the client side even if the API call fails
+      localStorage.removeItem('accessToken');
+      setIsLoggedIn(false);
+      setUserName(null);
+      navigate('/signin');
     }
   };
 
@@ -163,6 +187,7 @@ const HeaderBottom = () => {
             <p className="text-[22px] font-bold text-white tracking-wider hover:text-gray-100 transition-colors">
                 TUTHAITU
               </p>
+
             </Link>
           </div>
 
@@ -273,16 +298,7 @@ const HeaderBottom = () => {
                           Addresses
                         </div>
                       </Link>
-                      <div
-                        onClick={() => {
-                          handleLogout();
-                          setShowUser(false);
-                        }}
-                        className="py-2 hover:bg-gray-50 px-3 rounded transition-colors mt-2 border-t border-gray-200 flex items-center gap-2 text-red-500"
-                      >
-                        <span className="w-5">🚪</span>
-                        Logout
-                      </div>
+       
                     </>
                   ) : (
                     // Not logged in: Show Sign In and Sign Up

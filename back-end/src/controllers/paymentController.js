@@ -1,7 +1,8 @@
 // paymentController.js
 const axios = require('axios');
 const crypto = require('crypto'); // Thêm để tính signature
-const { Payment, Order } = require('../models');
+const { Payment, Order, OrderItem } = require('../models');
+const { updateOrderAfterPayment } = require('../services/paymentVerificationService');
 
 /**
  * Tạo yêu cầu thanh toán mới
@@ -64,7 +65,7 @@ const createPayment = async (req, res) => {
         }
 
         const vietQR_API_URL = 'https://api.vietqr.io/v2/generate';
-        const NGROK_URL = 'https://34e6f6632c0e.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
+        const NGROK_URL = 'https://914a26b2264d.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
         const callbackUrl = `${NGROK_URL}/api/payments/vietqr/callback`;
 
         // Chuyển đổi giá trị sang số nguyên VND (không có dấu thập phân)
@@ -132,7 +133,7 @@ const createPayment = async (req, res) => {
         }
 
         const PAYOS_API_URL = 'https://api-merchant.payos.vn/v2/payment-requests'; // URL API chính thức của PayOS
-        const NGROK_URL = 'https://34e6f6632c0e.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
+        const NGROK_URL = 'https://914a26b2264d.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
         const returnUrl = `${NGROK_URL}/api/payments/payos/callback`;
         const cancelUrl = `${NGROK_URL}/api/payments/payos/cancel`;
 
@@ -231,31 +232,13 @@ const vietQRCallback = async (req, res) => {
       payment.status = 'paid';
       payment.paidAt = new Date();
       payment.transactionId = transactionId;
+      await payment.save();
+      
+      // Cập nhật đơn hàng
+      await updateOrderAfterPayment(payment.orderId);
     } else {
       payment.status = 'failed';
-    }
-
-    await payment.save();
-
-    // Nếu payment status là paid, cập nhật các OrderItems liên quan sang shipping
-    if (payment.status === 'paid') {
-      try {
-        // Tìm các OrderItems thuộc về đơn hàng và đang ở trạng thái pending
-        const orderItems = await OrderItem.find({ 
-          orderId: payment.orderId,
-          status: "pending"
-        });
-        
-        // Cập nhật các OrderItems sang trạng thái shipping
-        for (const item of orderItems) {
-          item.status = "shipping";
-          await item.save();
-        }
-        
-        console.log(`Updated ${orderItems.length} order items to shipping status for orderId: ${orderId}`);
-      } catch (orderError) {
-        console.error('Error updating order items:', orderError);
-      }
+      await payment.save();
     }
 
     console.log(`Cập nhật trạng thái thanh toán thành công cho orderId: ${orderId}, status: ${payment.status}`);
@@ -308,34 +291,16 @@ const payosCallback = async (req, res) => {
     if (status === 'PAID') {
       payment.status = 'paid';
       payment.paidAt = new Date();
+      await payment.save();
+      
+      // Cập nhật đơn hàng
+      await updateOrderAfterPayment(payment.orderId);
+      
       console.log('Payment status updated to paid');
     } else {
       payment.status = 'failed';
+      await payment.save();
       console.log('Payment status updated to failed');
-    }
-
-    await payment.save();
-    console.log('Payment saved successfully');
-
-    // Nếu payment status là paid, cập nhật các OrderItems liên quan sang shipping
-    if (payment.status === 'paid') {
-      try {
-        // Tìm các OrderItems thuộc về đơn hàng và đang ở trạng thái pending
-        const orderItems = await OrderItem.find({ 
-          orderId: payment.orderId,
-          status: "pending"
-        });
-        
-        // Cập nhật các OrderItems sang trạng thái shipping
-        for (const item of orderItems) {
-          item.status = "shipping";
-          await item.save();
-        }
-        
-        console.log(`Updated ${orderItems.length} order items to shipping status`);
-      } catch (orderError) {
-        console.error('Error updating order items:', orderError);
-      }
     }
 
     return res.status(200).json({ 
