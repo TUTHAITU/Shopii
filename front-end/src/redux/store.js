@@ -7,8 +7,13 @@ import productsReducer from '../features/products/productsSlice';
 import cartReducer from '../features/cart/cartSlice';
 import addressReducer from '../features/address/addressSlice';
 import voucherReducer from '../features/voucher/voucherSlice';
-import orderSlice from './../features/order/orderSlice';
-import paymentReducer from '../features/payment/paymentSlice'; // Add this import
+import orderReducer from '../features/order/orderSlice';
+import paymentReducer from '../features/payment/paymentSlice'; 
+import reviewReducer from '../features/review/reviewSlice';
+import chatReducer from '../features/chat/chatSlice';
+import disputeReducer from '../features/dispute/disputeSlice';
+import profileReducer from '../features/profile/profileSlice';
+import returnRequestReducer from '../features/returnRequest/returnRequestSlice';
 
 const persistConfig = {
   key: 'root',
@@ -34,8 +39,13 @@ const store = configureStore({
     cart: cartReducerWithInitial,
     address: addressReducer,
     voucher: voucherReducer,
-    order: orderSlice,
-    payment: paymentReducer, // Add this line
+    order: orderReducer,
+    payment: paymentReducer,
+    review: reviewReducer,
+    chat: chatReducer,
+    dispute: disputeReducer,
+    profile: profileReducer,
+    returnRequest: returnRequestReducer,
   },
   middleware: (getDefaultMiddleware) => 
     getDefaultMiddleware({

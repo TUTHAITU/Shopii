@@ -1,19 +1,19 @@
 // orderSlice.js
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9999/api';
 
 export const createOrder = createAsyncThunk(
   'order/createOrder',
-  async (orderData, { getState, rejectWithValue }) => {
+  async (orderData, { rejectWithValue }) => {
     try {
-      const token = getState().auth.token;
-      if (!token) {
-        return rejectWithValue('No token found');
-      }
+      const token = localStorage.getItem('token');
       const response = await axios.post(`${API_URL}/buyers/orders`, orderData, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
       return response.data;
     } catch (error) {
@@ -22,40 +22,125 @@ export const createOrder = createAsyncThunk(
   }
 );
 
+// Fetch order history
+export const fetchOrderHistory = createAsyncThunk(
+  'order/fetchOrderHistory',
+  async ({ page = 1, limit = 10, status }, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('token');
+      let url = `${API_URL}/buyers/orders?page=${page}&limit=${limit}`;
+      
+      if (status) {
+        url += `&status=${status}`;
+      }
+      
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch order history');
+    }
+  }
+);
+
+// Fetch order details
+export const fetchOrderDetails = createAsyncThunk(
+  'order/fetchOrderDetails',
+  async (orderId, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/buyers/orders/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch order details');
+    }
+  }
+);
+
 const orderSlice = createSlice({
   name: 'order',
   initialState: {
-    order: null,
+    orders: [],
+    currentOrder: null,
+    orderDetails: null,
+    pagination: {
+      total: 0,
+      page: 1,
+      limit: 10,
+      pages: 1
+    },
     loading: false,
     error: null,
-    success: false,
+    createOrderSuccess: false
   },
   reducers: {
-    resetOrder: (state) => {
-      state.order = null;
-      state.success = false;
+    resetOrderState: (state) => {
+      state.createOrderSuccess = false;
       state.error = null;
     },
+    clearOrderDetails: (state) => {
+      state.orderDetails = null;
+    }
   },
   extraReducers: (builder) => {
     builder
+      // Create order
       .addCase(createOrder.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.success = false;
       })
       .addCase(createOrder.fulfilled, (state, action) => {
         state.loading = false;
-        state.order = action.payload;
-        state.success = true;
+        state.currentOrder = action.payload;
+        state.createOrderSuccess = true;
+        toast.success('Order created successfully!');
       })
       .addCase(createOrder.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.success = false;
+        toast.error(action.payload);
+      })
+      
+      // Order history
+      .addCase(fetchOrderHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchOrderHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.orders = action.payload.orders;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(fetchOrderHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        toast.error(action.payload);
+      })
+      
+      // Order details
+      .addCase(fetchOrderDetails.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchOrderDetails.fulfilled, (state, action) => {
+        state.loading = false;
+        state.orderDetails = action.payload.order;
+      })
+      .addCase(fetchOrderDetails.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        toast.error(action.payload);
       });
-  },
+  }
 });
 
-export const { resetOrder } = orderSlice.actions;
+export const { resetOrderState, clearOrderDetails } = orderSlice.actions;
+
 export default orderSlice.reducer;

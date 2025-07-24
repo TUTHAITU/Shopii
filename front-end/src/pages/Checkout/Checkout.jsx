@@ -195,24 +195,27 @@ const Checkout = () => {
       })), 
       selectedAddressId, 
       couponCode: voucher ? voucher.code : ''
-      // Removed paymentMethod
     };
 
     try {
+      console.log("Submitting order with items:", orderDetails.selectedItems);
       const result = await dispatch(createOrder(orderDetails)).unwrap();
       
-      // Remove selected items from cart
+      // Get all product IDs to remove from cart
       const productIds = selectedProducts.map(item => item.productId._id);
+      
+      // Remove the items from cart in a single batch operation
       await dispatch(removeSelectedItems(productIds)).unwrap();
       
       toast.success("Order placed successfully!");
       
-      // Navigate to payment page
+      // Navigate to payment page with stringified orderId to ensure it passes correctly
       navigate("/payment", { 
         state: { 
-          orderId: result.orderId, 
+          orderId: result.orderId.toString(), 
           totalPrice: result.totalPrice
-        } 
+        },
+        replace: true  // Use replace to prevent back navigation issues
       });
     } catch (error) {
       toast.error(error);

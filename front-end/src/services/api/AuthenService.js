@@ -14,6 +14,7 @@ class AuthenService {
             const response = await api.post('user/login', data);
             if (response.data.accessToken) {
                 localStorage.setItem('token', response.data.accessToken);
+                localStorage.setItem('accessToken', response.data.accessToken);
                 localStorage.setItem('refreshToken', response.data.refreshToken);
             }
             return response.data;

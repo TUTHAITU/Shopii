@@ -86,6 +86,7 @@ export default function ManageOrderHistory() {
   const [toDate, setToDate] = useState("");
   const [searchField, setSearchField] = useState("orderId");
   const [searchValue, setSearchValue] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   // Stats dialog
   const [openStatsDialog, setOpenStatsDialog] = useState(false);
@@ -317,7 +318,13 @@ export default function ManageOrderHistory() {
         }
       }
 
-      return passDateFilter && passIdFilter;
+      // Filter by status
+      let passStatusFilter = true;
+      if (statusFilter && statusFilter !== "all") {
+        passStatusFilter = item.status === statusFilter;
+      }
+
+      return passDateFilter && passIdFilter && passStatusFilter;
     });
     setFilteredItems(filtered);
   };
@@ -327,6 +334,7 @@ export default function ManageOrderHistory() {
     setToDate("");
     setSearchField("orderId");
     setSearchValue("");
+    setStatusFilter("");
     setFilteredItems(orderItems);
   };
 
@@ -443,6 +451,24 @@ export default function ManageOrderHistory() {
               onChange={e => setToDate(e.target.value)}
               size="small"
             />
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
+            <FormControl size="small" fullWidth>
+              <InputLabel id="status-filter-label">Status</InputLabel>
+              <Select
+                labelId="status-filter-label"
+                value={statusFilter}
+                label="Status"
+                onChange={e => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="shipping">Shipping</MenuItem>
+                <MenuItem value="shipped">Shipped</MenuItem>
+                <MenuItem value="failed to ship">Failed to ship</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={6} md={2}>
             <FormControl size="small" fullWidth>

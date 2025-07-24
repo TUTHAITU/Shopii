@@ -110,6 +110,18 @@ const Cart = () => {
 
   // Handle update quantity
   const handleUpdateQuantity = (productId, quantity) => {
+    // Get the cart item
+    const item = cartItems.find(item => item.productId._id === productId);
+    
+    // Check if item exists and has inventory data
+    if (item && item.productId && item.productId.inventoryQuantity !== undefined) {
+      // Check if requested quantity exceeds inventory
+      if (quantity > item.productId.inventoryQuantity) {
+        toast.warning(`Cannot add more than ${item.productId.inventoryQuantity} items (available in stock)`);
+        return;
+      }
+    }
+    
     dispatch(updateCartItem({ productId, quantity }));
   };
 
@@ -281,6 +293,12 @@ const Cart = () => {
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                             Unit Price: ${item.productId?.price?.toFixed(2) || "0.00"}
                           </Typography>
+                          
+                          {item.productId.inventoryQuantity !== undefined && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                              Available: {item.productId.inventoryQuantity} in stock
+                            </Typography>
+                          )}
                         </Box>
                         
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -315,11 +333,18 @@ const Cart = () => {
                             <IconButton 
                               size="small" 
                               onClick={() => handleUpdateQuantity(item.productId._id, item.quantity + 1)}
+                              disabled={item.quantity >= (item.productId.inventoryQuantity || 0)}
                               sx={{ 
                                 border: '1px solid #e0e0e0',
                                 borderRadius: '0 4px 4px 0',
-                                p: 0.5
+                                p: 0.5,
+                                '&.Mui-disabled': {
+                                  backgroundColor: '#f5f5f5',
+                                  color: 'rgba(0, 0, 0, 0.26)'
+                                }
                               }}
+                              title={item.quantity >= (item.productId.inventoryQuantity || 0) ? 
+                                "Maximum available quantity reached" : ""}
                             >
                               <AddIcon fontSize="small" />
                             </IconButton>

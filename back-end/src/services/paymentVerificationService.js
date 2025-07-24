@@ -94,11 +94,36 @@ const verifyPayOSPayment = async (payment) => {
  */
 const updateOrderAfterPayment = async (orderId) => {
   try {
+    console.log(`Updating order status after payment for orderId: ${orderId}`);
+    
     // Cập nhật trạng thái đơn hàng
     const order = await Order.findById(orderId);
-    if (order && order.status === 'pending') {
+    if (!order) {
+      console.error(`Order not found with ID: ${orderId}`);
+      return false;
+    }
+    
+    console.log(`Current order status: ${order.status}`);
+    
+    // Chỉ cập nhật nếu đơn hàng đang ở trạng thái pending
+    if (order.status === 'pending') {
       order.status = 'processing';
       await order.save();
+      console.log(`Order status updated from 'pending' to 'processing' for orderId: ${orderId}`);
+      
+      // Kiểm tra xem cập nhật có thành công không
+      const updatedOrder = await Order.findById(orderId);
+      console.log(`Verified updated order status: ${updatedOrder.status}`);
+      
+      if (updatedOrder.status !== 'processing') {
+        console.error(`Order status update verification failed! Expected 'processing', got '${updatedOrder.status}'`);
+        // Thử cập nhật lại một lần nữa
+        updatedOrder.status = 'processing';
+        await updatedOrder.save();
+        console.log(`Attempted second update of order status, new status: ${updatedOrder.status}`);
+      }
+    } else {
+      console.log(`Order status unchanged (${order.status}) as it's not in 'pending' state`);
     }
 
     // Cập nhật các OrderItems
@@ -107,16 +132,22 @@ const updateOrderAfterPayment = async (orderId) => {
       status: "pending"
     });
     
+    if (orderItems.length === 0) {
+      console.log(`No pending order items found for orderId: ${orderId}`);
+    }
+    
     // Cập nhật các OrderItems sang trạng thái shipping
+    let updatedCount = 0;
     for (const item of orderItems) {
       item.status = "shipping";
       await item.save();
+      updatedCount++;
     }
     
-    console.log(`Updated order and ${orderItems.length} order items to shipping status for orderId: ${orderId}`);
+    console.log(`Updated ${updatedCount} order items to shipping status for orderId: ${orderId}`);
     return true;
   } catch (error) {
-    console.error('Error updating order after payment:', error);
+    console.error(`Error updating order after payment for orderId: ${orderId}:`, error);
     return false;
   }
 };

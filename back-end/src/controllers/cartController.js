@@ -111,23 +111,56 @@ const deleteCartItem = async (req, res) => {
     const userId = req.user.id;
     const productId = req.params.productId; // Lấy productId từ URL
 
-    // Tìm giỏ hàng
-    const cart = await Cart.findOne({ userId });
-    if (!cart) {
+    // Use findOneAndUpdate with $pull to remove the item atomically
+    // This avoids version conflicts when multiple requests happen concurrently
+    const result = await Cart.findOneAndUpdate(
+      { userId },
+      { $pull: { items: { productId } } },
+      { new: true }
+    );
+
+    if (!result) {
       return res.status(404).json({ message: 'Cart not found' });
     }
 
-    // Tìm và xóa sản phẩm
-    const itemIndex = cart.items.findIndex(item => item.productId.toString() === productId);
-    if (itemIndex > -1) {
-      cart.items.splice(itemIndex, 1);
-      await cart.save();
-      res.status(200).json({ message: 'Item removed from cart', cart });
-    } else {
-      res.status(404).json({ message: 'Item not found in cart' });
-    }
+    res.status(200).json({ message: 'Item removed from cart', cart: result });
   } catch (error) {
-    console.error(error);
+    console.error('Error removing item from cart:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Xóa nhiều sản phẩm cùng lúc
+const removeMultipleItems = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { productIds } = req.body; // Array of product IDs to remove
+
+    // Validate input
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ message: 'Invalid or empty product IDs array' });
+    }
+
+    console.log(`Removing ${productIds.length} items from cart for user ${userId}`);
+
+    // Use updateOne with $pull to remove all specified items atomically
+    const result = await Cart.updateOne(
+      { userId },
+      { $pull: { items: { productId: { $in: productIds } } } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: 'Cart not found' });
+    }
+
+    // Return the updated cart
+    const updatedCart = await Cart.findOne({ userId }).populate('items.productId');
+    res.status(200).json({ 
+      message: `${result.modifiedCount > 0 ? 'Items removed from cart' : 'No items were removed'}`, 
+      cart: updatedCart 
+    });
+  } catch (error) {
+    console.error('Error removing multiple items from cart:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -137,5 +170,6 @@ module.exports = {
   addToCart,
   viewCart,
   updateCartItem,
-  deleteCartItem
+  deleteCartItem,
+  removeMultipleItems
 };

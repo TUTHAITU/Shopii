@@ -9,7 +9,7 @@ const { updateOrderAfterPayment } = require('../services/paymentVerificationServ
  */
 const createPayment = async (req, res) => {
   try {
-    const { orderId, method } = req.body;
+    const { orderId, method, replaceExisting } = req.body;
     const userId = req.user.id;
 
     // Kiểm tra phương thức thanh toán hợp lệ
@@ -31,8 +31,15 @@ const createPayment = async (req, res) => {
 
     // Kiểm tra xem đã có payment chưa
     const existingPayment = await Payment.findOne({ orderId });
+    
+    // Nếu có bản ghi thanh toán cũ và có yêu cầu thay thế, xóa bản ghi cũ
     if (existingPayment) {
-      return res.status(400).json({ message: 'Đơn hàng này đã có bản ghi thanh toán' });
+      if (replaceExisting) {
+        console.log(`Replacing existing payment record for order ${orderId}`);
+        await Payment.deleteOne({ _id: existingPayment._id });
+      } else {
+        return res.status(400).json({ message: 'Đơn hàng này đã có bản ghi thanh toán' });
+      }
     }
 
     // Tạo payment mới
@@ -65,14 +72,23 @@ const createPayment = async (req, res) => {
         }
 
         const vietQR_API_URL = 'https://api.vietqr.io/v2/generate';
-        const NGROK_URL = 'https://914a26b2264d.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
-        const callbackUrl = `${NGROK_URL}/api/payments/vietqr/callback`;
+        
+        // Sử dụng BASE_URL từ biến môi trường hoặc mặc định từ request
+        const BASE_URL = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+        console.log('Using BASE_URL for callbacks:', BASE_URL);
+        
+        const callbackUrl = `${BASE_URL}/api/buyers/payments/vietqr/callback`;
+        console.log('Callback URL:', callbackUrl);
 
         // Chuyển đổi giá trị sang số nguyên VND (không có dấu thập phân)
         const amountInVnd = Math.round(order.totalPrice);
         
         // Log giá trị gửi đi
         console.log('Sending to VietQR API - Amount:', amountInVnd, 'Original:', order.totalPrice);
+
+        // Save transaction reference for easier lookup
+        payment.transactionId = orderId.toString();
+        await payment.save();
 
         const response = await axios.post(vietQR_API_URL, {
           accountNo: process.env.BANK_ACCOUNT_NO,
@@ -133,9 +149,16 @@ const createPayment = async (req, res) => {
         }
 
         const PAYOS_API_URL = 'https://api-merchant.payos.vn/v2/payment-requests'; // URL API chính thức của PayOS
-        const NGROK_URL = 'https://914a26b2264d.ngrok-free.app'; // Thay bằng URL ngrok thực tế của bạn
-        const returnUrl = `${NGROK_URL}/api/payments/payos/callback`;
-        const cancelUrl = `${NGROK_URL}/api/payments/payos/cancel`;
+        
+        // Sử dụng BASE_URL từ biến môi trường hoặc mặc định từ request
+        const BASE_URL = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+        console.log('Using BASE_URL for callbacks:', BASE_URL);
+        
+        const returnUrl = `${BASE_URL}/api/buyers/payments/payos/callback`;
+        const cancelUrl = `${BASE_URL}/api/buyers/payments/payos/cancel`;
+        
+        console.log('Return URL:', returnUrl);
+        console.log('Cancel URL:', cancelUrl);
 
         // Tạo orderCode là số nguyên dương
         const numericOrderCode = Date.now(); // Sử dụng timestamp là số nguyên dương
@@ -165,6 +188,8 @@ const createPayment = async (req, res) => {
         // Lưu orderCode vào payment để có thể tra cứu sau này
         payment.transactionId = numericOrderCode.toString();
         await payment.save();
+        
+        console.log('PayOS payment data:', JSON.stringify(paymentData, null, 2));
 
         const response = await axios.post(PAYOS_API_URL, paymentData, {
           headers: {
@@ -218,30 +243,106 @@ const createPayment = async (req, res) => {
  */
 const vietQRCallback = async (req, res) => {
   try {
+    console.log('VietQR callback received with body:', req.body);
+    console.log('VietQR callback received with params:', req.query);
+    
     const { orderId, status, transactionId } = req.body;
 
-    // Tìm payment theo orderId
-    const payment = await Payment.findOne({ orderId });
+    if (!orderId) {
+      console.error('Missing orderId in VietQR callback');
+      return res.status(400).json({ message: 'Missing orderId parameter' });
+    }
+
+    // Tìm payment theo orderId hoặc transactionId
+    let payment;
+    
+    console.log('Looking for payment with orderId:', orderId);
+    payment = await Payment.findOne({ orderId });
+    
+    // Nếu không tìm thấy bằng orderId và có transactionId, thử tìm bằng transactionId
+    if (!payment && transactionId) {
+      console.log('Payment not found by orderId, trying with transactionId:', transactionId);
+      payment = await Payment.findOne({ transactionId: transactionId.toString() });
+    }
+    
     if (!payment) {
       console.error('Không tìm thấy thanh toán cho orderId:', orderId);
+      // Thử tìm tất cả các thanh toán gần đây để debug
+      const recentPayments = await Payment.find().sort({ createdAt: -1 }).limit(5);
+      console.log('Recent payments:', JSON.stringify(recentPayments, null, 2));
       return res.status(404).json({ message: 'Không tìm thấy thanh toán' });
     }
+    
+    console.log('Payment found:', payment._id, 'Current status:', payment.status);
 
     // Cập nhật trạng thái thanh toán
     if (status === 'SUCCESS') {
+      // Kiểm tra xem payment đã được cập nhật thành paid chưa
+      if (payment.status === 'paid') {
+        console.log(`Payment ${payment._id} already marked as paid, skipping payment update`);
+        
+        // Kiểm tra và cập nhật trạng thái đơn hàng nếu cần
+        const order = await Order.findById(payment.orderId);
+        if (order && order.status === 'pending') {
+          console.log(`Order still pending despite paid payment, forcing update for orderId: ${payment.orderId}`);
+          try {
+            order.status = 'processing';
+            await order.save();
+            console.log(`Order status forcefully updated to: ${order.status}`);
+            
+            // Cập nhật order items
+            const orderItems = await OrderItem.find({ 
+              orderId: payment.orderId,
+              status: "pending"
+            });
+            for (const item of orderItems) {
+              item.status = "shipping";
+              await item.save();
+            }
+            console.log(`Updated ${orderItems.length} order items to shipping`);
+          } catch (orderError) {
+            console.error(`Failed to update order status: ${orderError.message}`);
+          }
+        }
+        
+        return res.status(200).json({ 
+          success: true, 
+          message: 'Payment already processed successfully',
+          paymentStatus: payment.status
+        });
+      }
+      
       payment.status = 'paid';
       payment.paidAt = new Date();
-      payment.transactionId = transactionId;
+      if (transactionId) {
+        payment.transactionId = transactionId;
+      }
       await payment.save();
       
       // Cập nhật đơn hàng
-      await updateOrderAfterPayment(payment.orderId);
+      try {
+        await updateOrderAfterPayment(payment.orderId);
+        console.log('Order updated successfully for orderId:', payment.orderId);
+        
+        // Kiểm tra lại trạng thái đơn hàng sau khi cập nhật
+        const order = await Order.findById(payment.orderId);
+        if (order && order.status === 'pending') {
+          console.log(`Warning: Order status still pending after update attempt. Forcing update for orderId: ${payment.orderId}`);
+          order.status = 'processing';
+          await order.save();
+          console.log(`Order status forcefully updated to: ${order.status}`);
+        }
+      } catch (orderError) {
+        console.error('Error updating order:', orderError);
+      }
+      
+      console.log(`Cập nhật trạng thái thanh toán thành công cho orderId: ${orderId}, status: ${payment.status}`);
     } else {
       payment.status = 'failed';
       await payment.save();
+      console.log(`Cập nhật trạng thái thanh toán thất bại cho orderId: ${orderId}, status: ${payment.status}`);
     }
 
-    console.log(`Cập nhật trạng thái thanh toán thành công cho orderId: ${orderId}, status: ${payment.status}`);
     return res.status(200).json({ 
       success: true,
       message: 'Cập nhật trạng thái thanh toán thành công',
@@ -262,7 +363,9 @@ const vietQRCallback = async (req, res) => {
 const payosCallback = async (req, res) => {
   try {
     console.log('PayOS callback received with params:', req.query);
-    const { orderCode, status } = req.query; // PayOS thường gửi dữ liệu qua query params
+    console.log('PayOS callback received with body:', req.body);
+    
+    const { orderCode, status } = req.query;
 
     if (!orderCode) {
       console.error('Missing orderCode in PayOS callback');
@@ -282,19 +385,56 @@ const payosCallback = async (req, res) => {
     
     if (!payment) {
       console.error('Không tìm thấy thanh toán cho orderCode:', orderCode);
+      // Thử tìm tất cả các thanh toán gần đây để debug
+      const recentPayments = await Payment.find().sort({ createdAt: -1 }).limit(5);
+      console.log('Recent payments:', JSON.stringify(recentPayments, null, 2));
       return res.status(404).json({ message: 'Không tìm thấy thanh toán' });
     }
 
-    console.log('Payment found:', payment._id);
+    console.log('Payment found:', payment._id, 'Current status:', payment.status);
 
-    // Cập nhật trạng thái thanh toán
-    if (status === 'PAID') {
+    // Cập nhật trạng thái thanh toán - hỗ trợ nhiều kiểu status khác nhau từ PayOS
+    if (status === 'PAID' || status === 'SUCCESS' || status === '00') {
+      // Kiểm tra xem payment đã được cập nhật thành paid chưa
+      if (payment.status === 'paid') {
+        console.log(`Payment ${payment._id} already marked as paid, skipping payment update`);
+        
+        // Kiểm tra và cập nhật trạng thái đơn hàng nếu cần
+        const order = await Order.findById(payment.orderId);
+        if (order && order.status === 'pending') {
+          console.log(`Order still pending despite paid payment, forcing update for orderId: ${payment.orderId}`);
+          try {
+            order.status = 'processing';
+            await order.save();
+            console.log(`Order status forcefully updated to: ${order.status}`);
+            
+            // Cập nhật order items
+            const orderItems = await OrderItem.find({ 
+              orderId: payment.orderId,
+              status: "pending"
+            });
+            for (const item of orderItems) {
+              item.status = "shipping";
+              await item.save();
+            }
+            console.log(`Updated ${orderItems.length} order items to shipping`);
+          } catch (orderError) {
+            console.error(`Failed to update order status: ${orderError.message}`);
+          }
+        }
+        
+        return res.status(200).json({ 
+          success: true, 
+          message: 'Payment already processed successfully',
+          status: payment.status
+        });
+      }
+      
       payment.status = 'paid';
       payment.paidAt = new Date();
       await payment.save();
       
-      // Cập nhật đơn hàng
-      await updateOrderAfterPayment(payment.orderId);
+
       
       console.log('Payment status updated to paid');
     } else {
@@ -322,20 +462,32 @@ const checkPaymentStatus = async (req, res) => {
     const { orderId } = req.params;
     const userId = req.user.id;
 
+    console.log(`Checking payment status for orderId: ${orderId}, userId: ${userId}`);
+
     // Tìm thanh toán theo orderId
     const payment = await Payment.findOne({ orderId });
     if (!payment) {
+      console.error(`Payment not found for orderId: ${orderId}`);
       return res.status(404).json({ message: 'Không tìm thấy thông tin thanh toán' });
     }
 
     // Kiểm tra quyền truy cập
     if (payment.userId.toString() !== userId) {
+      console.error(`Access denied: payment.userId (${payment.userId}) doesn't match userId (${userId})`);
       return res.status(403).json({ message: 'Bạn không có quyền xem thông tin thanh toán này' });
     }
 
+    console.log(`Payment found: ${payment._id}, method: ${payment.method}, status: ${payment.status}`);
+
     // Tìm đơn hàng để lấy thêm thông tin
     const order = await Order.findById(orderId);
+    if (order) {
+      console.log(`Order found: ${order._id}, status: ${order.status}`);
+    } else {
+      console.log(`Order not found for orderId: ${orderId}`);
+    }
 
+    // Tách biệt phần response từ logic xử lý
     return res.status(200).json({
       payment: {
         id: payment._id,

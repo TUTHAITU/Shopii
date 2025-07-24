@@ -66,22 +66,22 @@ const ProductDetail = () => {
       console.log("Fetching product with ID:", id);
       setLoading(true);
       setError(null);
-      
+
       try {
         // Sử dụng api service thay vì axios trực tiếp
         const res = await api.get(`seller/products/${id}`);
         console.log("Product detail response:", res.data);
-        
+
         if (!res.data || !res.data.data) {
           throw new Error("Product data not found");
         }
-        
+
         setProductDetail(res.data.data);
 
         // Lấy danh sách review
         const resReview = await api.get(`seller/products/${id}/reviews`);
         console.log("Reviews response:", resReview.data);
-        
+
         // Group lại để reply nằm đúng dưới review gốc
         const grouped = groupReviews(resReview.data.data || []);
         setReviews(grouped);
@@ -92,7 +92,7 @@ const ProductDetail = () => {
       }
       setLoading(false);
     };
-    
+
     fetchData();
   }, [id, token]);
 
@@ -111,7 +111,7 @@ const ProductDetail = () => {
     try {
       // Sử dụng api service thay vì axios trực tiếp
       const res = await api.post(
-        `seller/products/${id}/reviews/${reviewId}/reply`, 
+        `seller/products/${id}/reviews/${reviewId}/reply`,
         { comment }
       );
       const reply = res.data.data; // object trả về từ backend
@@ -161,7 +161,7 @@ const ProductDetail = () => {
       </Box>
     );
   }
-  
+
   if (!productDetail || !productDetail.product) {
     return (
       <Box p={5} textAlign="center">
@@ -176,6 +176,22 @@ const ProductDetail = () => {
         </Button>
       </Box>
     );
+  }
+
+  // Tính trung bình số sao và tổng review nếu không có sẵn trong productDetail
+  let avgRating = productDetail.avgRating;
+  let totalReviews = productDetail.totalReviews;
+  if (typeof avgRating === 'undefined' || typeof totalReviews === 'undefined') {
+    // Chỉ tính trên review gốc (không tính reply)
+    const rootReviews = reviews.filter(r => !r.parentId);
+    totalReviews = rootReviews.length;
+    if (totalReviews > 0) {
+      avgRating = (
+        rootReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews
+      ).toFixed(1);
+    } else {
+      avgRating = 0;
+    }
   }
 
   return (
@@ -221,6 +237,16 @@ const ProductDetail = () => {
                 ? new Date(productDetail.inventory.updatedAt).toLocaleString()
                 : "N/A"}
             </Typography>
+            {/* Hiển thị trung bình số sao và tổng review */}
+            <Box display="flex" alignItems="center" mb={1}>
+              <Rating value={Number(avgRating)} precision={0.1} readOnly size="medium" sx={{ mr: 1 }} />
+              <Typography variant="body2" color="text.secondary">
+                {avgRating} / 5.0
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                ({totalReviews} review{totalReviews === 1 ? '' : 's'})
+              </Typography>
+            </Box>
           </Grid>
         </Grid>
       </Paper>

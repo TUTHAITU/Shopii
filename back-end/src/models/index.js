@@ -14,6 +14,8 @@ const Inventory = require("./Inventory");
 const Feedback = require("./Feedback");
 const Dispute = require("./Dispute");
 const Store = require("./Store");
+const Message = require("./Message");
+const Conversation = require("./Conversation");
 
 module.exports = {
   User,
@@ -32,4 +34,6 @@ module.exports = {
   Feedback,
   Dispute,
   Store,
+  Message,
+  Conversation,
 };

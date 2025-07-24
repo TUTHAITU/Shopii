@@ -59,7 +59,7 @@ export default function Products({ products, onProductUpdated }) {
     if (!products || products.length === 0) return [];
     const allCategories = products
       .map(p => p.productId?.categoryId)
-      .filter(Boolean);
+      .filter(Boolean); // Filter out null/undefined categoryId
     const map = new Map();
     allCategories.forEach(cat => {
       if (cat && cat._id && !map.has(cat._id)) {
@@ -77,23 +77,23 @@ export default function Products({ products, onProductUpdated }) {
       const keywordLower = keywords.trim().toLowerCase();
       filtered = filtered.filter(
         p =>
-          p.productId.title && p.productId.title.toLowerCase().includes(keywordLower)
+          p.productId?.title && p.productId.title.toLowerCase().includes(keywordLower)
       );
     }
 
     // 2. Lọc theo category (dựa trên kết quả bước 1)
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(
-        p => selectedCategories.includes(p.productId.categoryId._id)
+        p => p.productId?.categoryId && selectedCategories.includes(p.productId.categoryId._id)
       );
     }
 
     // 3. Lọc theo trạng thái action (dựa trên kết quả bước 2)
     if (actionFilter === "available") {
-      filtered = filtered.filter(p => p.productId.isAuction === true);
+      filtered = filtered.filter(p => p.productId?.isAuction === true);
     }
     if (actionFilter === "notAvailable") {
-      filtered = filtered.filter(p => p.productId.isAuction === false);
+      filtered = filtered.filter(p => p.productId?.isAuction === false);
     }
     return [...filtered];
   }, [products, selectedCategories, actionFilter, keywords]);
@@ -219,7 +219,7 @@ export default function Products({ products, onProductUpdated }) {
                             size="small"
                           />
                         }
-                        label={<Typography variant="body2">{cat.name}</Typography>}
+                        label={<Typography variant="body2">{cat?.name || 'Uncategorized'}</Typography>}
                         sx={{ mb: 0.5 }}
                       />
                     ))}
@@ -301,7 +301,7 @@ export default function Products({ products, onProductUpdated }) {
                         )}
                       </TableCell>
 
-                      <TableCell onClick={() => navigateToProduct(product.productId._id)}>{product.productId?.categoryId.name}</TableCell>
+                      <TableCell onClick={() => navigateToProduct(product.productId._id)}>{product.productId?.categoryId?.name}</TableCell>
                       <TableCell>
                         <Tooltip title="Update">
                           <EditIcon

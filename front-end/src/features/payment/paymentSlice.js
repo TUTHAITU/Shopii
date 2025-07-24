@@ -12,7 +12,23 @@ export const createPayment = createAsyncThunk(
       if (!token) {
         return rejectWithValue('No token found');
       }
-      const response = await axios.post(`${API_URL}/buyers/payments`, paymentData, {
+
+      // Validate orderId is present
+      if (!paymentData.orderId) {
+        console.error('Missing orderId in payment data:', paymentData);
+        return rejectWithValue('Missing order ID. Please try again.');
+      }
+
+      // Ensure orderId is a string
+      const sanitizedData = {
+        ...paymentData,
+        orderId: String(paymentData.orderId),
+        replaceExisting: paymentData.replaceExisting || false // Add flag to indicate if previous payment should be deleted
+      };
+      
+      console.log('Creating payment with data:', sanitizedData);
+      
+      const response = await axios.post(`${API_URL}/buyers/payments`, sanitizedData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -83,6 +99,15 @@ const paymentSlice = createSlice({
       state.success = false;
       state.error = null;
     },
+    cancelPaymentPolling: (state) => {
+      // This action is specifically for canceling the polling process
+      // It can be called when navigating away from payment pages
+      state.statusChecking = false;
+      // Also reset any related data to prevent callback issues
+      state.paymentStatus = null;
+      state.loading = false;
+      // Don't reset other data in case we want to keep payment information
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -115,5 +140,5 @@ const paymentSlice = createSlice({
   },
 });
 
-export const { resetPayment } = paymentSlice.actions;
+export const { resetPayment, cancelPaymentPolling } = paymentSlice.actions;
 export default paymentSlice.reducer;

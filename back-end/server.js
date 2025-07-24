@@ -4,6 +4,8 @@ const router = require("./src/routers/index.js");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const { initScheduler } = require("./src/config/scheduler");
+const http = require("http");
+const { initSocketServer } = require("./src/services/socketService");
 
 const app = express();
 dotenv.config(); // Move dotenv.config() before using process.env
@@ -66,8 +68,19 @@ app.get('/', (req, res) => {
   res.redirect(frontendUrl);
 });
 
-app.listen(PORT, () => {
-  console.log(`server is running at PORT ${PORT}`);
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = initSocketServer(server);
+
+// Store io instance on app for potential use in request handlers
+app.set('io', io);
+
+// Listen on server (not app)
+server.listen(PORT, () => {
+  console.log(`Server is running at PORT ${PORT}`);
+  console.log(`WebSocket server is running`);
   
   // Initialize schedulers after server starts
   initScheduler();

@@ -30,12 +30,39 @@ const authMiddleware = async (req, res, next) => {
         });
       }
       
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('Decoded token:', decoded);
+      // Add extra error handling for JWT verification
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('Decoded token:', decoded);
 
-      // Add user from payload
-      req.user = decoded;
-      next();
+        // Add user from payload
+        req.user = decoded;
+        
+        // Check if token is expired
+        const currentTime = Math.floor(Date.now() / 1000);
+        if (decoded.exp && decoded.exp < currentTime) {
+          return res.status(401).json({
+            success: false,
+            message: 'Token has expired'
+          });
+        }
+        
+        next();
+      } catch (jwtError) {
+        if (jwtError.name === 'JsonWebTokenError') {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid token format'
+          });
+        } else if (jwtError.name === 'TokenExpiredError') {
+          return res.status(401).json({
+            success: false,
+            message: 'Token has expired'
+          });
+        } else {
+          throw jwtError; // Let it be caught by the outer catch block
+        }
+      }
     } catch (error) {
       console.error('Token verification error:', error.message);
       logger.error('Token verification error:', error);

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { resetPayment, checkPaymentStatus } from '../../features/payment/paymentSlice';
+import { resetPayment, checkPaymentStatus, cancelPaymentPolling } from '../../features/payment/paymentSlice';
 import { motion } from 'framer-motion';
 import { 
   Box, 
@@ -41,6 +41,20 @@ const PaymentResult = () => {
   // Check PayOS specific status
   const payosStatus = query.get('status'); // PAID, CANCELLED, etc.
   
+  // Check if payment was already completed via sessionStorage
+  useEffect(() => {
+    const orderId = locationState.orderId || queryOrderId;
+    if (orderId) {
+      const paymentCompleted = sessionStorage.getItem(`payment_${orderId}_completed`);
+      if (paymentCompleted === 'true') {
+        console.log(`Payment ${orderId} was already completed, redirecting to home`);
+        dispatch(cancelPaymentPolling());
+        toast.success("Payment was already completed successfully!");
+        navigate('/', { replace: true });
+      }
+    }
+  }, [locationState.orderId, queryOrderId, dispatch, navigate]);
+  
   // Ưu tiên sử dụng location state trước, sau đó là query params
   useEffect(() => {
     const getStatusInfo = async () => {
@@ -51,31 +65,68 @@ const PaymentResult = () => {
       const orderId = locationState.orderId || queryOrderId;
       const message = locationState.message || queryMessage;
       
+      console.log('Initial payment status info:', { finalStatus, orderId, payosStatus });
+      
+      // Check if payment is already completed
+      if (orderId) {
+        const paymentCompleted = sessionStorage.getItem(`payment_${orderId}_completed`);
+        if (paymentCompleted === 'true') {
+          console.log(`Payment ${orderId} is already marked as completed`);
+          finalStatus = 'paid';
+          setIsVerifying(false);
+          setPaymentResult({
+            status: 'paid',
+            orderId: orderId || '',
+            message: "Payment was already completed successfully!"
+          });
+          return;
+        }
+      }
+      
       // Đối với PayOS, chúng ta cần dịch trạng thái
-      if (payosStatus === 'PAID') {
+      if (payosStatus === 'PAID' || payosStatus === 'SUCCESS' || payosStatus === '00') {
+        console.log('PayOS status indicates payment success');
         finalStatus = 'paid';
+        
+        // Mark the payment as completed in session storage
+        if (orderId) {
+          sessionStorage.setItem(`payment_${orderId}_completed`, 'true');
+        }
       } else if (payosStatus === 'CANCELLED' || payosStatus === 'FAILED') {
+        console.log('PayOS status indicates payment failure');
         finalStatus = 'failed';
       }
       
       // Nếu có orderId nhưng không có status rõ ràng, kiểm tra với API
       if (orderId && (!finalStatus || finalStatus === 'pending')) {
+        console.log('Need to verify payment status with API for order:', orderId);
         try {
           if (token) {
             const resultAction = await dispatch(checkPaymentStatus(orderId));
             if (checkPaymentStatus.fulfilled.match(resultAction)) {
               const data = resultAction.payload;
-              if (data?.payment?.status === 'paid') {
+              const paymentStatus = data?.payment?.status;
+              
+              console.log('API payment status check result:', paymentStatus);
+              
+              // Chỉ dựa vào trạng thái thanh toán
+              if (paymentStatus === 'paid') {
                 finalStatus = 'paid';
-              } else if (data?.payment?.status === 'failed') {
+                // Mark as completed
+                sessionStorage.setItem(`payment_${orderId}_completed`, 'true');
+              } else if (paymentStatus === 'failed') {
                 finalStatus = 'failed';
               }
+            } else {
+              console.error('Failed to check payment status:', resultAction.error);
             }
           }
         } catch (error) {
           console.error('Error verifying payment:', error);
         }
       }
+      
+      console.log('Final payment status determined:', finalStatus);
       
       // Set final result
       setPaymentResult({
@@ -92,6 +143,19 @@ const PaymentResult = () => {
     // Reset payment state in Redux
     dispatch(resetPayment());
   }, [dispatch, locationState, queryStatus, queryOrderId, queryMessage, payosStatus, token]);
+
+  // Stop any polling immediately when landing on this page
+  useEffect(() => {
+    console.log('Payment result page loaded, ensuring all polling is stopped');
+    dispatch(cancelPaymentPolling());
+    
+    // Mark this payment as completed in sessionStorage
+    const orderId = locationState.orderId || queryOrderId;
+    if (orderId && paymentResult.status === 'paid') {
+      console.log(`Marking payment ${orderId} as completed`);
+      sessionStorage.setItem(`payment_${orderId}_completed`, 'true');
+    }
+  }, [dispatch, locationState.orderId, queryOrderId, paymentResult.status]);
   
   // Show toast and start countdown after verification
   useEffect(() => {
@@ -106,20 +170,44 @@ const PaymentResult = () => {
       toast.error(paymentResult.message || 'Đã xảy ra lỗi trong quá trình thanh toán.');
     }
     
+    let timer;
     // Start countdown to redirect to home
-    const timer = setInterval(() => {
-      setCountDown(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          navigate('/');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    if (countDown > 0) {
+      timer = setInterval(() => {
+        setCountDown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate('/');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
     
-    return () => clearInterval(timer);
-  }, [isVerifying, paymentResult, navigate]);
+    // Cleanup function to clear the timer when component unmounts
+    return () => {
+      if (timer) {
+        console.log('Clearing redirect timer');
+        clearInterval(timer);
+      }
+    };
+  }, [isVerifying, paymentResult, navigate, countDown]);
+  
+  // Add another effect to force navigation when leaving the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Force cancel any pending operations
+      dispatch(resetPayment());
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      dispatch(resetPayment());
+    };
+  }, [dispatch]);
   
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>

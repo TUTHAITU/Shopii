@@ -49,15 +49,20 @@ const SignIn = () => {
         password: formData.password
       });
       
+      // Ensure we use accessToken consistently
       dispatch(setCredentials({
         user: response.user,
-        token: response.token
+        token: response.accessToken || response.token
       }));
       
       toast.success('Login successful!');
       
-      // All users are redirected to home page
-      navigate('/');
+      // Redirect based on user role
+      if (response.user.role === 'admin') {
+        navigate('/admin'); // Admin users to admin overview
+      } else {
+        navigate('/'); // Regular users to home page
+      }
       
     } catch (error) {
       toast.error(error.message || 'Login failed');

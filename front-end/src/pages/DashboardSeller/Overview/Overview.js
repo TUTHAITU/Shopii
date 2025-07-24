@@ -56,15 +56,25 @@ const Overview = () => {
     const [report, setReport] = useState(null);
     const [period, setPeriod] = useState('');
     const [loading, setLoading] = useState(false);
+    // Thêm state cho filter ngày
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     useEffect(() => {
         handleSetDashboardTitle("Dashboard");
     }, [handleSetDashboardTitle]);
 
-    const fetchData = async (selectedPeriod = '') => {
+    // Hàm fetchData nhận thêm from/to
+    const fetchData = async (selectedPeriod = '', from = '', to = '') => {
         setLoading(true);
         try {
-            const res = await api.get(`seller/report${selectedPeriod ? `?period=${selectedPeriod}` : ''}`);
+            let query = `seller/report`;
+            const params = [];
+            if (selectedPeriod) params.push(`period=${selectedPeriod}`);
+            if (from) params.push(`from=${from}`);
+            if (to) params.push(`to=${to}`);
+            if (params.length > 0) query += `?${params.join('&')}`;
+            const res = await api.get(query);
             setReport(res.data.data);
         } catch (error) {
             console.error('Error fetching report:', error);
@@ -74,8 +84,11 @@ const Overview = () => {
         }
     };
 
+    // Khi period thay đổi, reset ngày và fetch lại
     useEffect(() => {
-        fetchData(period);
+        fetchData(period, '', '');
+        setStartDate('');
+        setEndDate('');
     }, [period]);
 
     // Format date for better display
@@ -94,7 +107,7 @@ const Overview = () => {
 
     return (
         <Box>
-            {/* Time Filter */}
+            {/* Time & Date Filter */}
             <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -106,8 +119,7 @@ const Overview = () => {
                 <Typography variant="h5" fontWeight={600} color="text.primary">
                     Sales Overview
                 </Typography>
-                
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
                     <FormControl size="small" sx={{ minWidth: 150 }}>
                         <InputLabel id="period-label">Time Period</InputLabel>
                         <Select
@@ -121,10 +133,43 @@ const Overview = () => {
                             ))}
                         </Select>
                     </FormControl>
+                    {/* Date to Date filter */}
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={e => setStartDate(e.target.value)}
+                            style={{ height: 40, borderRadius: 4, border: '1px solid #ccc', padding: '0 8px' }}
+                        />
+                        <Typography variant="body2">to</Typography>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={e => setEndDate(e.target.value)}
+                            style={{ height: 40, borderRadius: 4, border: '1px solid #ccc', padding: '0 8px' }}
+                        />
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            sx={{ height: 40, ml: 1 }}
+                            onClick={() => {
+                                setPeriod('');
+                                fetchData('', startDate, endDate);
+                            }}
+                            disabled={!startDate || !endDate}
+                        >
+                            Lọc
+                        </Button>
+                    </Box>
                     <Button 
                         variant="outlined" 
                         size="small" 
-                        onClick={() => setPeriod('')}
+                        onClick={() => {
+                            setPeriod('');
+                            setStartDate('');
+                            setEndDate('');
+                            fetchData('', '', '');
+                        }}
                         sx={{ height: 40 }}
                     >
                         Reset

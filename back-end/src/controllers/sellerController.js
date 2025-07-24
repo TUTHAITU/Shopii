@@ -331,6 +331,13 @@ exports.getProducts = async (req, res) => {
         populate: { path: "categoryId" } 
       });
     
+    // Log products with missing categoryId
+    for (const inventory of allInventories) {
+      if (inventory.productId && !inventory.productId.categoryId) {
+        console.warn(`Warning: Product ${inventory.productId._id} has null categoryId`);
+      }
+    }
+    
     // Đảm bảo thứ tự trả về khớp với thứ tự của products
     const sortedInventories = [];
     for (const product of products) {
@@ -624,9 +631,149 @@ exports.submitFeedback = async (req, res) => {
 };
 
 // Báo cáo doanh số nâng cấp cho dashboard
+// exports.getSalesReport = async (req, res) => {
+//   try {
+//     const { period } = req.query; // week, month, year
+//     const sellerId = req.user.id;
+
+//     // 1. Lấy tất cả sản phẩm của seller
+//     const products = await Product.find({ sellerId }).populate("categoryId", "name");
+//     const productIds = products.map(p => p._id);
+
+//     // 2. Lấy tất cả order items liên quan (đã giao - shipped)
+//     const orderItems = await OrderItem.find({
+//       productId: { $in: productIds },
+//       status: "shipped"
+//     }).populate({
+//       path: "orderId",
+//       select: "orderDate buyerId addressId",
+//       populate: {
+//         path: "addressId",
+//         select: "city country",
+//       }
+//     });
+
+
+//     // 3. Lọc theo khoảng thời gian
+//     const now = new Date();
+//     let startDate;
+//     switch (period) {
+//       case "week":
+//         startDate = new Date(now);
+//         startDate.setDate(startDate.getDate() - 7);
+//         break;
+//       case "month":
+//         startDate = new Date(now);
+//         startDate.setMonth(startDate.getMonth() - 1);
+//         break;
+//       case "year":
+//         startDate = new Date(now);
+//         startDate.setFullYear(startDate.getFullYear() - 1);
+//         break;
+//       default:
+//         startDate = new Date(0); // all time
+//     }
+
+//     const filteredItems = orderItems.filter(item =>
+//       item.orderId && new Date(item.orderId.orderDate) >= startDate
+//     );
+
+//     // --- Tổng quan ---
+//     const totalRevenue = filteredItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+//     // Lấy tất cả các buyerId duy nhất từ filteredItems
+//     const uniqueCustomerSet = new Set(
+//       filteredItems.map(i => i.orderId?.buyerId?.toString())
+//     );
+
+//     // Chuyển thành mảng
+//     const uniqueCustomerList = Array.from(uniqueCustomerSet);
+
+//     // Đếm số lượng
+//     const uniqueCustomers = uniqueCustomerList.length;
+
+
+//     const productsShipped = [...new Set(filteredItems.map(i => i.productId.toString()))].length;
+
+//     // --- Revenue by Category ---
+//     const categoryRevenueMap = {};
+//     filteredItems.forEach(item => {
+//       const product = products.find(p => p._id.equals(item.productId));
+//       const catName = product?.categoryId?.name || "Other";
+//       categoryRevenueMap[catName] = (categoryRevenueMap[catName] || 0) + (item.unitPrice * item.quantity);
+//     });
+//     // Format for PieChart
+//     const revenueByCategory = Object.entries(categoryRevenueMap).map(([name, value]) => ({
+//       name,
+//       value: Number(((value / totalRevenue) * 100).toFixed(0)) // % phần trăm
+//     }));
+
+//     // --- Top Shipping Destinations ---
+//     const destinationMap = {};
+//     filteredItems.forEach(item => {
+//       const city = item.orderId?.addressId?.city || "Unknown";
+//       destinationMap[city] = (destinationMap[city] || 0) + (item.unitPrice * item.quantity);
+//     });
+//     const revenueByDestination = Object.entries(destinationMap)
+//       .map(([name, value]) => ({
+//         name,
+//         value: Number(((value / totalRevenue) * 100).toFixed(0)),
+//         raw: value
+//       }))
+//       .sort((a, b) => b.raw - a.raw)
+//       .map(({ raw, ...rest }) => rest);
+
+
+//     // --- Revenue Over Time ---
+//     const revenueByDate = {};
+//     filteredItems.forEach(item => {
+//       const dateStr = new Date(item.orderId.orderDate).toISOString().split('T')[0];
+//       revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + (item.unitPrice * item.quantity);
+//     });
+//     const revenueOverTime = Object.entries(revenueByDate).map(([date, revenue]) => ({
+//       date,
+//       revenue
+//     })).sort((a, b) => new Date(a.date) - new Date(b.date));;
+
+//     // --- Top Products ---
+//     const productSalesMap = {};
+//     filteredItems.forEach(item => {
+//       const product = products.find(p => p._id.equals(item.productId));
+//       const name = product?.title || "Unknown";
+//       if (!productSalesMap[name]) productSalesMap[name] = { quantity: 0, revenue: 0 };
+//       productSalesMap[name].quantity += item.quantity;
+//       productSalesMap[name].revenue += item.unitPrice * item.quantity;
+//     });
+//     const topProducts = Object.entries(productSalesMap)
+//       .map(([product, val]) => ({
+//         product,
+//         quantity: val.quantity,
+//         revenue: val.revenue
+//       }))
+//       .sort((a, b) => b.revenue - a.revenue)
+//       .slice(0, 5); // Top 5
+
+//     // --- Trả kết quả ---
+//     res.json({
+//       success: true,
+//       data: {
+//         totalRevenue,
+//         uniqueCustomers,      // số lượng unique
+//         uniqueCustomerList,   // mảng các ID customer
+//         productsShipped,
+//         revenueByCategory,
+//         topDestinations: revenueByDestination,
+//         revenueOverTime,
+//         topProducts
+//       }
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+// Báo cáo doanh số nâng cấp cho dashboard
 exports.getSalesReport = async (req, res) => {
   try {
-    const { period } = req.query; // week, month, year
+    const { period, from, to } = req.query; // week, month, year, from, to
     const sellerId = req.user.id;
 
     // 1. Lấy tất cả sản phẩm của seller
@@ -646,30 +793,45 @@ exports.getSalesReport = async (req, res) => {
       }
     });
 
-
-    // 3. Lọc theo khoảng thời gian
-    const now = new Date();
-    let startDate;
-    switch (period) {
-      case "week":
-        startDate = new Date(now);
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case "month":
-        startDate = new Date(now);
-        startDate.setMonth(startDate.getMonth() - 1);
-        break;
-      case "year":
-        startDate = new Date(now);
-        startDate.setFullYear(startDate.getFullYear() - 1);
-        break;
-      default:
-        startDate = new Date(0); // all time
+    // 3. Lọc theo khoảng thời gian: ưu tiên from/to nếu có
+    let filteredItems = orderItems;
+    if (from || to) {
+      // Nếu có from/to thì lọc theo khoảng ngày
+      const fromDate = from ? new Date(from) : new Date(0);
+      // Đặt toDate là cuối ngày nếu có to
+      let toDate = to ? new Date(to) : new Date();
+      if (to) {
+        toDate.setHours(23, 59, 59, 999);
+      }
+      filteredItems = orderItems.filter(item => {
+        if (!item.orderId) return false;
+        const orderDate = new Date(item.orderId.orderDate);
+        return orderDate >= fromDate && orderDate <= toDate;
+      });
+    } else {
+      // Nếu không có from/to thì lọc theo period như cũ
+      const now = new Date();
+      let startDate;
+      switch (period) {
+        case "week":
+          startDate = new Date(now);
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case "month":
+          startDate = new Date(now);
+          startDate.setMonth(startDate.getMonth() - 1);
+          break;
+        case "year":
+          startDate = new Date(now);
+          startDate.setFullYear(startDate.getFullYear() - 1);
+          break;
+        default:
+          startDate = new Date(0); // all time
+      }
+      filteredItems = orderItems.filter(item =>
+        item.orderId && new Date(item.orderId.orderDate) >= startDate
+      );
     }
-
-    const filteredItems = orderItems.filter(item =>
-      item.orderId && new Date(item.orderId.orderDate) >= startDate
-    );
 
     // --- Tổng quan ---
     const totalRevenue = filteredItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
@@ -692,7 +854,7 @@ exports.getSalesReport = async (req, res) => {
     filteredItems.forEach(item => {
       const product = products.find(p => p._id.equals(item.productId));
       const catName = product?.categoryId?.name || "Other";
-      categoryRevenueMap[catName] = (categoryRevenueMap[catName] || 0) + (item.unitPrice * item.quantity);
+categoryRevenueMap[catName] = (categoryRevenueMap[catName] || 0) + (item.unitPrice * item.quantity);
     });
     // Format for PieChart
     const revenueByCategory = Object.entries(categoryRevenueMap).map(([name, value]) => ({
@@ -763,7 +925,6 @@ exports.getSalesReport = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 // Lấy tất cả yêu cầu trả hàng liên quan tới seller hiện tại
 exports.getReturnRequests = async (req, res) => {
   try {

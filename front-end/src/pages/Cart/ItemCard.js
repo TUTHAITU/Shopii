@@ -27,8 +27,15 @@ const ItemCard = ({
   };
 
   const handleIncrease = () => {
-    onUpdateQuantity(item._id, item.quantity + 1);
+    // Check if item has inventory data and if current quantity is below inventory
+    const inventoryQuantity = item.inventoryQuantity || 0;
+    if (item.quantity < inventoryQuantity) {
+      onUpdateQuantity(item._id, item.quantity + 1);
+    }
   };
+
+  // Determine if the increase button should be disabled
+  const isIncreaseDisabled = item.quantity >= (item.inventoryQuantity || 0);
 
   return (
     <motion.div
@@ -94,6 +101,11 @@ const ItemCard = ({
             <Typography variant="body2" color="text.secondary">
               ${item.price?.toFixed(2) || "0.00"} per item
             </Typography>
+            {item.inventoryQuantity !== undefined && (
+              <Typography variant="body2" color="text.secondary">
+                Available: {item.inventoryQuantity} in stock
+              </Typography>
+            )}
           </Box>
           
           {/* Quantity Controls */}
@@ -128,6 +140,7 @@ const ItemCard = ({
             <IconButton 
               size="small" 
               onClick={handleIncrease}
+              disabled={isIncreaseDisabled}
               sx={{ 
                 border: '1px solid #e0e0e0',
                 borderRadius: '0 4px 4px 0',
