@@ -13,7 +13,7 @@ import HeaderBottom from "./components/home/Header/HeaderBottom";
 import SpecialCase from "./components/SpecialCase/SpecialCase";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ManagerDashboardSellerLaydout from "./pages/DashboardAdmin/ManagerDashboardAdminLaydout";
+import AdminDashboardLayout from "./pages/DashboardAdmin/ManagerDashboardAdminLaydout";
 import ManageProduct from "./pages/DashboardAdmin/ManageProduct/ManageProduct";
 import ManageReturnRequest from "./pages/DashboardAdmin/ManageReturnRequest/ManageReturnRequest";
 import Overview from "./pages/DashboardAdmin/Overview/Overview";
@@ -71,7 +71,7 @@ const router = createBrowserRouter(
         <Route path="/profile" element={<Profile />}></Route>
         <Route path="/verify-email" element={<VerifyEmail />}></Route>
       </Route> */}
-      <Route path="/admin" element={<ManagerDashboardSellerLaydout />}>
+      <Route path="/admin" element={<AdminDashboardLayout />}>
         <Route path="/admin" element={<Overview />}></Route>
         <Route
           path="/admin/manage-products"
