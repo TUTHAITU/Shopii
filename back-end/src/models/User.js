@@ -23,24 +23,19 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-// Password hashing middleware
+// Mã hóa mật khẩu trước khi lưu
 userSchema.pre("save", async function (next) {
-  // if (!this.isModified("password")) {
-  //   return next();
-  // }
-  // const salt = await bcrypt.genSalt(10);
-  // this.password = await bcrypt.hash(this.password, salt);
+  if (!this.isModified("password")) {
+    return next();
+  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Method to compare password
-// userSchema.methods.comparePassword = async function (candidatePassword) {
-//   return await bcrypt.compare(candidatePassword, this.password);
-// };
-
-// Method to login old account
+// So sánh mật khẩu khi đăng nhập
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  return this.password === candidatePassword;
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model("User", userSchema,);
+module.exports = mongoose.model("User", userSchema);

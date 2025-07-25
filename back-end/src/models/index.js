@@ -9,12 +9,13 @@ const ShippingInfo = require("./ShippingInfo");
 const ReturnRequest = require("./ReturnRequest");
 const Bid = require("./Bid");
 const Review = require("./Review");
-const Message = require("./Message");
 const Coupon = require("./Coupon");
 const Inventory = require("./Inventory");
 const Feedback = require("./Feedback");
 const Dispute = require("./Dispute");
 const Store = require("./Store");
+const Message = require("./Message");
+const Conversation = require("./Conversation");
 
 module.exports = {
   User,
@@ -28,10 +29,11 @@ module.exports = {
   ReturnRequest,
   Bid,
   Review,
-  Message,
   Coupon,
   Inventory,
   Feedback,
   Dispute,
   Store,
+  Message,
+  Conversation,
 };
